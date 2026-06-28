@@ -5,6 +5,7 @@ import type { GameStore } from '../store/gameStore';
 
 interface TownViewProps {
   game: GameStore;
+  onSelectBuilding: (buildingId: TownSnapshot['buildings'][number]['id']) => void;
 }
 
 const toSnapshot = (game: GameStore): TownSnapshot => ({
@@ -20,7 +21,7 @@ const toSnapshot = (game: GameStore): TownSnapshot => ({
   })),
 });
 
-export function TownView({ game }: TownViewProps) {
+export function TownView({ game, onSelectBuilding }: TownViewProps) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const phaserGameRef = useRef<Phaser.Game | null>(null);
 
@@ -50,6 +51,19 @@ export function TownView({ game }: TownViewProps) {
   useEffect(() => {
     phaserGameRef.current?.events.emit('town:update', toSnapshot(game));
   }, [game]);
+
+  useEffect(() => {
+    const phaserGame = phaserGameRef.current;
+    if (!phaserGame) {
+      return undefined;
+    }
+
+    phaserGame.events.on('town:building-select', onSelectBuilding);
+
+    return () => {
+      phaserGame.events.off('town:building-select', onSelectBuilding);
+    };
+  }, [onSelectBuilding]);
 
   return <div className="town-canvas" ref={hostRef} aria-label="Mountain town view" />;
 }

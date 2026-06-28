@@ -285,6 +285,11 @@ p {
   background: var(--panel);
 }
 
+.building-card.selected {
+  border-color: #b77b32;
+  box-shadow: 0 0 0 2px rgba(196, 134, 58, 0.28);
+}
+
 .building-card-top {
   display: flex;
   justify-content: space-between;

@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { OFFLINE_BOOST_MULTIPLIER } from '../simulation';
+import type { BuildingId } from '../simulation';
 import { useGameStore } from '../store/gameStore';
 import { BuildingPanel } from './BuildingPanel';
 import { LibraryPanel } from './LibraryPanel';
@@ -14,6 +15,14 @@ type PanelId = 'buildings' | 'market' | 'library' | 'town';
 export function App() {
   const game = useGameStore();
   const [activePanel, setActivePanel] = useState<PanelId>('buildings');
+  const [selectedBuildingId, setSelectedBuildingId] = useState<BuildingId | null>(null);
+  const [selectedBuildingVersion, setSelectedBuildingVersion] = useState(0);
+
+  const selectBuildingFromTown = useCallback((buildingId: BuildingId) => {
+    setSelectedBuildingId(buildingId);
+    setSelectedBuildingVersion((version) => version + 1);
+    setActivePanel('buildings');
+  }, []);
 
   useEffect(() => {
     let frameId = 0;
@@ -51,8 +60,14 @@ export function App() {
       return <WorkerPanel game={game} />;
     }
 
-    return <BuildingPanel game={game} />;
-  }, [activePanel, game]);
+    return (
+      <BuildingPanel
+        game={game}
+        selectedBuildingId={selectedBuildingId}
+        selectedBuildingVersion={selectedBuildingVersion}
+      />
+    );
+  }, [activePanel, game, selectedBuildingId, selectedBuildingVersion]);
 
   return (
     <div className="app-shell">
@@ -87,7 +102,7 @@ export function App() {
 
       <main className="main-layout">
         <section className="town-section" aria-label="Town view">
-          <TownView game={game} />
+          <TownView game={game} onSelectBuilding={selectBuildingFromTown} />
         </section>
 
         <section className="control-section">

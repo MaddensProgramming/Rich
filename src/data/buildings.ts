@@ -88,7 +88,7 @@ export const buildings: BuildingDefinition[] = [
     label: 'Mine',
     description: 'Extracts coal, iron ore, and stone from the mountain.',
     recipes: ['mine_coal_focus', 'mine_iron_focus', 'mine_stone_focus', 'mine_balanced'],
-    baseProductionMultiplier: 0.92,
+    baseProductionMultiplier: 0.66,
     upgradeCosts: {
       2: { wood: 18, stone: 16 },
       3: { wood: 34, stone: 28, iron_bars: 4 },
@@ -101,7 +101,7 @@ export const buildings: BuildingDefinition[] = [
     label: 'Lumberjack',
     description: 'Cuts timber for buildings, tools, and bows.',
     recipes: ['lumberjack_wood'],
-    baseProductionMultiplier: 0.92,
+    baseProductionMultiplier: 0.66,
     upgradeCosts: {
       2: { wood: 14, stone: 8 },
       3: { wood: 32, iron_bars: 3 },
@@ -114,7 +114,7 @@ export const buildings: BuildingDefinition[] = [
     label: 'Farm',
     description: 'Grows vegetables that can be cooked into food.',
     recipes: ['farm_vegetables'],
-    baseProductionMultiplier: 0.92,
+    baseProductionMultiplier: 0.66,
     upgradeCosts: {
       2: { wood: 12, stone: 10 },
       3: { wood: 28, stone: 22 },
@@ -127,7 +127,7 @@ export const buildings: BuildingDefinition[] = [
     label: 'Food Maker',
     description: 'Turns vegetables into preserved meals for workers.',
     recipes: ['food_maker_basic_food'],
-    baseProductionMultiplier: 0.78,
+    baseProductionMultiplier: 0.56,
     upgradeCosts: {
       2: { wood: 16, stone: 10, vegetables: 20 },
       3: { wood: 36, stone: 24, iron_bars: 4 },
@@ -140,7 +140,7 @@ export const buildings: BuildingDefinition[] = [
     label: 'Smelter',
     description: 'Consumes coal and iron ore to produce iron bars.',
     recipes: ['smelter_iron_bars'],
-    baseProductionMultiplier: 0.64,
+    baseProductionMultiplier: 0.46,
     upgradeCosts: {
       2: { stone: 22, coal: 12 },
       3: { stone: 45, coal: 26, iron_bars: 5 },
@@ -153,7 +153,7 @@ export const buildings: BuildingDefinition[] = [
     label: 'Blacksmith',
     description: 'Makes swords from iron bars or bows from wood.',
     recipes: ['blacksmith_swords', 'blacksmith_bows'],
-    baseProductionMultiplier: 0.5,
+    baseProductionMultiplier: 0.36,
     upgradeCosts: {
       2: { wood: 20, stone: 16, iron_bars: 3 },
       3: { wood: 44, coal: 22, iron_bars: 9 },

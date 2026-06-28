@@ -111,6 +111,19 @@ export class TownScene extends Phaser.Scene {
         .setOrigin(0.5)
         .setDepth(6);
       const status = this.add.circle(position.x + 44, position.y - 20, 6, 0x73c66d).setDepth(7);
+      const emitBuildingSelect = () => this.game.events.emit('town:building-select', buildingId);
+
+      labelBackground
+        .setInteractive({ useHandCursor: true })
+        .on(Phaser.Input.Events.POINTER_UP, emitBuildingSelect)
+        .on(Phaser.Input.Events.POINTER_OVER, () => {
+          labelBackground.setStrokeStyle(2, 0xf8f3df, 0.72);
+        })
+        .on(Phaser.Input.Events.POINTER_OUT, () => {
+          labelBackground.setStrokeStyle(1, 0xf8f3df, 0.38);
+        });
+
+      label.setInteractive({ useHandCursor: true }).on(Phaser.Input.Events.POINTER_UP, emitBuildingSelect);
 
       this.visuals.set(buildingId, { labelBackground, label, status });
     });

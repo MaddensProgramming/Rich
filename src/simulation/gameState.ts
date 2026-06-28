@@ -19,16 +19,16 @@ export const DEFAULT_RNG_SEED = 0xdecafbad;
 export const MAX_OFFLINE_SECONDS = 8 * 60 * 60;
 export const MAX_OFFLINE_BOOST_GAME_SECONDS = 20 * 60;
 export const OFFLINE_BOOST_MULTIPLIER = 5;
-export const FOOD_CONSUMPTION_PER_WORKER = 0.03;
+export const FOOD_CONSUMPTION_PER_WORKER = 0.05;
 export const DEFAULT_AUTO_MARKET_BATCH_SIZE = 10;
 
 const initialWorkers: Record<BuildingId, number> = {
   mine: 1,
-  lumberjack: 1,
-  farm: 1,
-  food_maker: 1,
-  smelter: 1,
-  blacksmith: 1,
+  lumberjack: 0,
+  farm: 0,
+  food_maker: 0,
+  smelter: 0,
+  blacksmith: 0,
 };
 
 const initialRecipes: Record<BuildingId, BuildingState['recipeId']> = {
@@ -108,7 +108,7 @@ export const createInitialGameState = (now = Date.now()): GameState => ({
     iron_bars: 1,
   }),
   workers: {
-    total: 6,
+    total: 1,
     housingCapacity: 8,
   },
   buildings: Object.fromEntries(

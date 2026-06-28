@@ -1,14 +1,17 @@
+import { useEffect, useRef } from 'react';
 import {
   MAX_BUILDING_LEVEL,
   canAffordResources,
   getBuildingUpgradeCost,
 } from '../simulation';
 import type { GameStore } from '../store/gameStore';
-import type { ResourceMap } from '../simulation';
+import type { BuildingId, ResourceMap } from '../simulation';
 import { formatNumber, formatSignedRate } from './format';
 
 interface BuildingPanelProps {
   game: GameStore;
+  selectedBuildingId: BuildingId | null;
+  selectedBuildingVersion: number;
 }
 
 const CostList = ({ game, cost }: { game: GameStore; cost: ResourceMap }) => {
@@ -51,12 +54,27 @@ const FlowList = ({ game, flows }: { game: GameStore; flows: ResourceMap }) => {
   );
 };
 
-export function BuildingPanel({ game }: BuildingPanelProps) {
+export function BuildingPanel({ game, selectedBuildingId, selectedBuildingVersion }: BuildingPanelProps) {
+  const buildingRefs = useRef<Partial<Record<BuildingId, HTMLElement>>>({});
   const assignedWorkers = game.definitions.buildings.reduce(
     (total, building) => total + game.buildings[building.id].workers,
     0,
   );
   const availableWorkers = game.workers.total - assignedWorkers;
+
+  useEffect(() => {
+    if (!selectedBuildingId) {
+      return;
+    }
+
+    const frameId = window.requestAnimationFrame(() => {
+      const element = buildingRefs.current[selectedBuildingId];
+      element?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      element?.focus({ preventScroll: true });
+    });
+
+    return () => window.cancelAnimationFrame(frameId);
+  }, [selectedBuildingId, selectedBuildingVersion]);
 
   return (
     <section className="panel building-panel" aria-label="Buildings">
@@ -83,7 +101,18 @@ export function BuildingPanel({ game }: BuildingPanelProps) {
             : 0;
 
           return (
-            <article className="building-card" key={definition.id}>
+            <article
+              className={`building-card${selectedBuildingId === definition.id ? ' selected' : ''}`}
+              key={definition.id}
+              ref={(element) => {
+                if (element) {
+                  buildingRefs.current[definition.id] = element;
+                } else {
+                  delete buildingRefs.current[definition.id];
+                }
+              }}
+              tabIndex={-1}
+            >
               <div className="building-card-top">
                 <div>
                   <h3>{definition.label}</h3>

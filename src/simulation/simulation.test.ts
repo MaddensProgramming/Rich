@@ -26,6 +26,13 @@ describe('simulation economy', () => {
     const state = createInitialGameState(0);
 
     expect(sumAssignedWorkers(state.buildings)).toBe(state.workers.total);
+    expect(state.workers.total).toBe(1);
+    expect(state.buildings.mine.workers).toBe(1);
+    expect(state.buildings.lumberjack.workers).toBe(0);
+    expect(state.buildings.farm.workers).toBe(0);
+    expect(state.buildings.food_maker.workers).toBe(0);
+    expect(state.buildings.smelter.workers).toBe(0);
+    expect(state.buildings.blacksmith.workers).toBe(0);
     expect(state.workers.total).toBeLessThan(state.workers.housingCapacity);
     expect(state.money).toBeLessThan(BASIC_BOOK_PACK_COST);
     expect(state.money).toBeLessThan(getWorkerHireCost(state));
@@ -36,8 +43,11 @@ describe('simulation economy', () => {
 
   it('runs the farm to food production chain with food consumption', () => {
     let state = createInitialGameState(0);
+    state.workers.total = 2;
     state = assignWorkers(state, 'mine', 0);
     state = assignWorkers(state, 'lumberjack', 0);
+    state = assignWorkers(state, 'farm', 1);
+    state = assignWorkers(state, 'food_maker', 1);
     state = assignWorkers(state, 'smelter', 0);
     state = assignWorkers(state, 'blacksmith', 0);
 
