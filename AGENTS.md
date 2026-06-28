@@ -2,7 +2,7 @@
 
 ## Project
 
-Mountain Factory Idle is a browser idle/management game. Use `mountain_factory_idle_design.md` as the product source of truth until a fuller implementation exists.
+Mountain Factory Idle is a browser idle/management game. Use `README.md` as the current product and implementation reference.
 
 Recommended stack:
 
@@ -14,6 +14,8 @@ Recommended stack:
 - Vitest for simulation and economy tests.
 
 Keep simulation logic separate from React and Phaser. UI code may display state and dispatch actions, but production rules, market math, food penalties, books, save/load shape, and offline boost behavior belong in the simulation layer.
+
+Keep `README.md` up to date whenever implemented gameplay, architecture, setup, deployment, or testing behavior changes.
 
 ## Useful Subagents
 
@@ -33,4 +35,3 @@ Good prompts:
 - "After implementation, run `code-reviewer` and summarize only material issues."
 
 Avoid spawning subagents for small single-file edits. Prefer read-heavy or review-heavy delegation first, and keep write-heavy work coordinated through the parent agent. Be patient when waiting for subagents to finish their work.
-
