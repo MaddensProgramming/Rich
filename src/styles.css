@@ -651,10 +651,18 @@ input[type="checkbox"] {
     grid-template-columns: 1fr;
   }
 
-  .town-section,
-  .town-canvas,
   .control-section {
     min-height: 480px;
+  }
+
+  .town-section {
+    min-height: 0;
+    aspect-ratio: 1 / 1;
+  }
+
+  .town-canvas {
+    height: 100%;
+    min-height: 0;
   }
 
   .panel {
@@ -723,11 +731,6 @@ input[type="checkbox"] {
   .resource-strip,
   .panel-tabs {
     grid-template-columns: 1fr;
-  }
-
-  .town-section,
-  .town-canvas {
-    min-height: 360px;
   }
 
   .market-row {

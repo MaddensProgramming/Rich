@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import townBackdropUrl from '../../assets/town/mountain-town-backdrop.png';
 import type { BuildingId } from '../../simulation';
 
 interface TownBuildingSnapshot {
@@ -17,19 +18,34 @@ export interface TownSnapshot {
 }
 
 interface BuildingVisual {
-  base: Phaser.GameObjects.Rectangle;
-  roof: Phaser.GameObjects.Triangle;
+  labelBackground: Phaser.GameObjects.Rectangle;
   label: Phaser.GameObjects.Text;
   status: Phaser.GameObjects.Arc;
 }
 
+const TOWN_BACKDROP_KEY = 'mountain-town-backdrop';
+
+const buildingPositions: Record<BuildingId, { x: number; y: number }> = {
+  mine: { x: 0.18, y: 0.29 },
+  lumberjack: { x: 0.47, y: 0.33 },
+  farm: { x: 0.57, y: 0.51 },
+  food_maker: { x: 0.75, y: 0.37 },
+  smelter: { x: 0.29, y: 0.74 },
+  blacksmith: { x: 0.69, y: 0.78 },
+};
+
 export class TownScene extends Phaser.Scene {
+  private backdrop?: Phaser.GameObjects.Image;
   private visuals = new Map<BuildingId, BuildingVisual>();
   private smoke: Phaser.GameObjects.Arc[] = [];
   private statusText?: Phaser.GameObjects.Text;
 
   constructor() {
     super('TownScene');
+  }
+
+  preload() {
+    this.load.image(TOWN_BACKDROP_KEY, townBackdropUrl);
   }
 
   create() {
@@ -46,6 +62,11 @@ export class TownScene extends Phaser.Scene {
       .setDepth(10);
 
     this.game.events.on('town:update', this.updateTown, this);
+    this.scale.on(Phaser.Scale.Events.RESIZE, this.layoutTown, this);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.game.events.off('town:update', this.updateTown, this);
+      this.scale.off(Phaser.Scale.Events.RESIZE, this.layoutTown, this);
+    });
   }
 
   update(_time: number, delta: number) {
@@ -64,58 +85,35 @@ export class TownScene extends Phaser.Scene {
 
   private drawBackdrop() {
     const { width, height } = this.scale;
-    this.add.rectangle(width / 2, height / 2, width, height, 0x8fc7c9);
-    this.add.triangle(width * 0.5, height * 0.12, 0, height * 0.58, width * 0.4, 0, width * 0.8, height * 0.58, 0x5e7473);
-    this.add.triangle(width * 0.28, height * 0.25, 0, height * 0.42, width * 0.34, 0, width * 0.68, height * 0.42, 0x7f8d82);
-    this.add.triangle(width * 0.72, height * 0.28, 0, height * 0.36, width * 0.28, 0, width * 0.56, height * 0.36, 0x6b817c);
-    this.add.rectangle(width / 2, height * 0.75, width, height * 0.5, 0x587454);
-    this.add.rectangle(width / 2, height * 0.82, width, height * 0.08, 0x8c7655);
-
-    for (let index = 0; index < 9; index += 1) {
-      this.add.circle(40 + index * 72, height * 0.68 + (index % 2) * 12, 16, 0x2e5d4f);
-      this.add.rectangle(40 + index * 72, height * 0.72 + (index % 2) * 12, 8, 34, 0x6f513f);
-    }
+    this.add.rectangle(width / 2, height / 2, width, height, 0x273a33);
+    this.backdrop = this.add.image(width / 2, height / 2, TOWN_BACKDROP_KEY).setDepth(0);
+    this.layoutBackdrop();
   }
 
   private createBuildings() {
     const { width, height } = this.scale;
-    const positions: Record<BuildingId, { x: number; y: number; color: number }> = {
-      mine: { x: width * 0.18, y: height * 0.63, color: 0x53585b },
-      lumberjack: { x: width * 0.36, y: height * 0.69, color: 0x7d5d3c },
-      farm: { x: width * 0.54, y: height * 0.72, color: 0x6d8a3f },
-      food_maker: { x: width * 0.72, y: height * 0.66, color: 0xa76947 },
-      smelter: { x: width * 0.34, y: height * 0.83, color: 0x66534d },
-      blacksmith: { x: width * 0.62, y: height * 0.84, color: 0x514c57 },
-    };
 
-    (Object.entries(positions) as [BuildingId, { x: number; y: number; color: number }][]).forEach(
-      ([buildingId, position]) => {
-        const base = this.add.rectangle(position.x, position.y, 92, 56, position.color).setStrokeStyle(2, 0x233137);
-        const roof = this.add.triangle(
-          position.x,
-          position.y - 42,
-          -54,
-          26,
-          0,
-          -18,
-          54,
-          26,
-          0x9f5640,
-        );
-        const label = this.add
-          .text(position.x, position.y - 8, '', {
-            align: 'center',
-            color: '#f6f2e8',
-            fontFamily: 'Arial, sans-serif',
-            fontSize: '12px',
-            fontStyle: 'bold',
-          })
-          .setOrigin(0.5);
-        const status = this.add.circle(position.x + 38, position.y - 22, 6, 0x73c66d);
+    (Object.keys(buildingPositions) as BuildingId[]).forEach((buildingId) => {
+      const position = this.getCanvasPosition(buildingId);
+      const labelBackground = this.add
+        .rectangle(position.x, position.y, 96, 42, 0x17211f, 0.72)
+        .setStrokeStyle(1, 0xf8f3df, 0.38)
+        .setDepth(5);
+      const label = this.add
+        .text(position.x, position.y, '', {
+          align: 'center',
+          color: '#fff8e8',
+          fontFamily: 'Arial, sans-serif',
+          fontSize: '12px',
+          fontStyle: 'bold',
+          lineSpacing: 2,
+        })
+        .setOrigin(0.5)
+        .setDepth(6);
+      const status = this.add.circle(position.x + 44, position.y - 20, 6, 0x73c66d).setDepth(7);
 
-        this.visuals.set(buildingId, { base, roof, label, status });
-      },
-    );
+      this.visuals.set(buildingId, { labelBackground, label, status });
+    });
 
     for (let index = 0; index < 7; index += 1) {
       this.smoke.push(this.add.circle(width * 0.34 + index * 5, height * 0.62 + index * 8, 7, 0xd6d2c8, 0.32));
@@ -134,9 +132,53 @@ export class TownScene extends Phaser.Scene {
       }
 
       visual.label.setText(`${building.label}\nLv ${building.level} · ${building.workers}`);
+      visual.labelBackground.setDisplaySize(Math.max(94, visual.label.width + 18), visual.label.height + 12);
       visual.status.setFillStyle(building.blocked ? 0xd8903f : 0x73c66d);
-      visual.base.setAlpha(building.workers > 0 ? 1 : 0.72);
-      visual.roof.setAlpha(building.workers > 0 ? 1 : 0.72);
+      visual.label.setAlpha(building.workers > 0 ? 1 : 0.68);
+      visual.labelBackground.setAlpha(building.workers > 0 ? 0.74 : 0.52);
     }
+  }
+
+  private layoutTown() {
+    const { width, height } = this.scale;
+
+    this.layoutBackdrop();
+    this.statusText?.setPosition(18, 16);
+
+    for (const [buildingId, visual] of this.visuals) {
+      const position = this.getCanvasPosition(buildingId);
+      visual.labelBackground.setPosition(position.x, position.y);
+      visual.label.setPosition(position.x, position.y);
+      visual.status.setPosition(position.x + 44, position.y - 20);
+    }
+
+    this.smoke.forEach((particle, index) => {
+      particle.setPosition(width * 0.29 + index * 5, height * 0.62 + index * 8);
+    });
+  }
+
+  private layoutBackdrop() {
+    const { width, height } = this.scale;
+
+    if (!this.backdrop) {
+      return;
+    }
+
+    const scale = Math.min(width / this.backdrop.width, height / this.backdrop.height);
+    this.backdrop.setPosition(width / 2, height / 2).setScale(scale);
+  }
+
+  private getCanvasPosition(buildingId: BuildingId) {
+    const { width, height } = this.scale;
+    const position = buildingPositions[buildingId];
+    const backdropWidth = this.backdrop?.displayWidth ?? width;
+    const backdropHeight = this.backdrop?.displayHeight ?? height;
+    const left = width / 2 - backdropWidth / 2;
+    const top = height / 2 - backdropHeight / 2;
+
+    return {
+      x: left + position.x * backdropWidth,
+      y: top + position.y * backdropHeight,
+    };
   }
 }

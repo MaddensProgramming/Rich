@@ -32,5 +32,5 @@ Good prompts:
 - "Use `persistence-qa` to review the save/offline implementation and wait for its findings."
 - "After implementation, run `code-reviewer` and summarize only material issues."
 
-Avoid spawning subagents for small single-file edits. Prefer read-heavy or review-heavy delegation first, and keep write-heavy work coordinated through the parent agent.
+Avoid spawning subagents for small single-file edits. Prefer read-heavy or review-heavy delegation first, and keep write-heavy work coordinated through the parent agent. Be patient when waiting for subagents to finish their work.
 
