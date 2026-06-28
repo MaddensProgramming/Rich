@@ -3,20 +3,37 @@ import {
   applyOfflineProgress,
   advanceWallClockState,
   assignWorkers,
+  BASIC_BOOK_PACK_COST,
   buyResource,
   canUpgradeBook,
   createInitialGameState,
   equipBook,
+  getBuildingUpgradeCost,
+  getWorkerHireCost,
   makeBookKey,
   MAX_OFFLINE_BOOST_GAME_SECONDS,
   prepareGameStateForSave,
   sanitizeGameState,
   sellResource,
+  setMarketAutomationRule,
+  sumAssignedWorkers,
   tickGame,
   upgradeBook,
 } from './index';
 
 describe('simulation economy', () => {
+  it('starts with constrained resources so early choices have tradeoffs', () => {
+    const state = createInitialGameState(0);
+
+    expect(sumAssignedWorkers(state.buildings)).toBe(state.workers.total);
+    expect(state.workers.total).toBeLessThan(state.workers.housingCapacity);
+    expect(state.money).toBeLessThan(BASIC_BOOK_PACK_COST);
+    expect(state.money).toBeLessThan(getWorkerHireCost(state));
+    expect(state.resources.iron_bars).toBeLessThan(
+      getBuildingUpgradeCost(state, 'blacksmith').iron_bars ?? 0,
+    );
+  });
+
   it('runs the farm to food production chain with food consumption', () => {
     let state = createInitialGameState(0);
     state = assignWorkers(state, 'mine', 0);
@@ -48,6 +65,34 @@ describe('simulation economy', () => {
     const afterDrift = tickGame(afterSell, 60);
     expect(afterDrift.market.wood.pressure).toBeGreaterThan(afterSell.market.wood.pressure);
     expect(afterDrift.market.wood.pressure).toBeLessThanOrEqual(1);
+  });
+
+  it('runs auto-market rules on a game-time cooldown', () => {
+    let seller = createInitialGameState(0);
+    for (const buildingId of Object.keys(seller.buildings) as Array<keyof typeof seller.buildings>) {
+      seller = assignWorkers(seller, buildingId, 0);
+    }
+    seller.resources.wood = 50;
+    seller = setMarketAutomationRule(seller, 'wood', { sellAbove: 40, batchSize: 5 });
+
+    const beforeCooldown = tickGame(seller, 0.5);
+    expect(beforeCooldown.resources.wood).toBe(50);
+
+    const afterCooldown = tickGame(beforeCooldown, 0.5);
+    expect(afterCooldown.resources.wood).toBeCloseTo(45);
+    expect(afterCooldown.money).toBeGreaterThan(beforeCooldown.money);
+
+    let buyer = createInitialGameState(0);
+    for (const buildingId of Object.keys(buyer.buildings) as Array<keyof typeof buyer.buildings>) {
+      buyer = assignWorkers(buyer, buildingId, 0);
+    }
+    buyer.resources.coal = 0;
+    buyer.money = 100;
+    buyer = setMarketAutomationRule(buyer, 'coal', { buyBelow: 5, batchSize: 3 });
+
+    const bought = tickGame(buyer, 1);
+    expect(bought.resources.coal).toBeCloseTo(3);
+    expect(bought.money).toBeLessThan(buyer.money);
   });
 
   it('enforces book equip limits and preserves equipped copies during upgrades', () => {

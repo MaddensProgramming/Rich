@@ -129,6 +129,13 @@ export interface MarketResourceState {
   pressure: number;
 }
 
+export interface MarketAutomationRule {
+  buyBelow: number | null;
+  sellAbove: number | null;
+  batchSize: number;
+  lastRunAt: number;
+}
+
 export interface OfflineState {
   chargeSeconds: number;
   active: boolean;
@@ -160,6 +167,7 @@ export interface GameState {
   };
   buildings: Record<BuildingId, BuildingState>;
   market: Record<ResourceId, MarketResourceState>;
+  marketAutomation: Record<ResourceId, MarketAutomationRule>;
   books: {
     owned: Partial<Record<BookKey, number>>;
   };

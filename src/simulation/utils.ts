@@ -136,6 +136,32 @@ export const cloneGameState = (state: GameState): GameState => ({
       { pressure: asFiniteNumber(state.market[resourceId]?.pressure, 1) },
     ]),
   ) as Record<ResourceId, MarketResourceState>,
+  marketAutomation: Object.fromEntries(
+    resourceIds.map((resourceId) => {
+      const rule = state.marketAutomation?.[resourceId];
+      return [
+        resourceId,
+        {
+          buyBelow:
+            typeof rule?.buyBelow === 'number' && Number.isFinite(rule.buyBelow)
+              ? Math.max(0, rule.buyBelow)
+              : null,
+          sellAbove:
+            typeof rule?.sellAbove === 'number' && Number.isFinite(rule.sellAbove)
+              ? Math.max(0, rule.sellAbove)
+              : null,
+          batchSize:
+            typeof rule?.batchSize === 'number' && Number.isFinite(rule.batchSize)
+              ? Math.max(1, Math.trunc(rule.batchSize))
+              : 10,
+          lastRunAt:
+            typeof rule?.lastRunAt === 'number' && Number.isFinite(rule.lastRunAt)
+              ? Math.max(0, rule.lastRunAt)
+              : 0,
+        },
+      ];
+    }),
+  ) as GameState['marketAutomation'],
   books: {
     owned: Object.fromEntries(
       Object.entries(state.books.owned).map(([bookKey, count]) => [

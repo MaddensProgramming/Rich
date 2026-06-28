@@ -6,7 +6,7 @@ import {
   MAX_OFFLINE_BOOST_GAME_SECONDS,
   OFFLINE_BOOST_MULTIPLIER,
 } from './gameState';
-import { driftMarketPressureInPlace } from './market';
+import { applyMarketAutomation, driftMarketPressureInPlace } from './market';
 import type { BuildingId, GameState, ResourceMap } from './types';
 import {
   addResourceMap,
@@ -172,7 +172,7 @@ export const tickGame = (state: GameState, requestedDeltaSeconds: number): GameS
     return state;
   }
 
-  const next = cloneGameState(state);
+  let next = cloneGameState(state);
   const boost = computeBoostedGameSeconds(next, realDeltaSeconds);
   const gameSeconds = boost.gameSeconds;
   const emptyStats = createEmptyStats();
@@ -250,6 +250,8 @@ export const tickGame = (state: GameState, requestedDeltaSeconds: number): GameS
     globalProductionMultiplier: next.stats.globalProductionMultiplier,
     gameSpeed: gameSeconds / realDeltaSeconds,
   };
+
+  next = applyMarketAutomation(next);
 
   return next;
 };

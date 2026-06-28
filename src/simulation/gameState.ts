@@ -8,6 +8,7 @@ import type {
   BuildingState,
   EquippedBook,
   GameState,
+  MarketAutomationRule,
   MarketResourceState,
   ResourceId,
 } from './types';
@@ -18,12 +19,13 @@ export const DEFAULT_RNG_SEED = 0xdecafbad;
 export const MAX_OFFLINE_SECONDS = 8 * 60 * 60;
 export const MAX_OFFLINE_BOOST_GAME_SECONDS = 20 * 60;
 export const OFFLINE_BOOST_MULTIPLIER = 5;
-export const FOOD_CONSUMPTION_PER_WORKER = 0.025;
+export const FOOD_CONSUMPTION_PER_WORKER = 0.03;
+export const DEFAULT_AUTO_MARKET_BATCH_SIZE = 10;
 
 const initialWorkers: Record<BuildingId, number> = {
-  mine: 2,
+  mine: 1,
   lumberjack: 1,
-  farm: 2,
+  farm: 1,
   food_maker: 1,
   smelter: 1,
   blacksmith: 1,
@@ -61,24 +63,52 @@ const normalizeEquippedBooks = (value: unknown, buildingId: BuildingId): Equippe
     .map((book) => ({ bookId: book.bookId, rarity: book.rarity }));
 };
 
+const normalizeAutomationRule = (value: unknown): MarketAutomationRule => {
+  const rawRule = isObject(value) ? value : {};
+  const buyBelow = asFiniteNumber(rawRule.buyBelow, Number.NaN);
+  const sellAbove = asFiniteNumber(rawRule.sellAbove, Number.NaN);
+  const batchSize = Math.trunc(asFiniteNumber(rawRule.batchSize, DEFAULT_AUTO_MARKET_BATCH_SIZE));
+  const lastRunAt = asFiniteNumber(rawRule.lastRunAt, 0);
+
+  return {
+    buyBelow: Number.isFinite(buyBelow) && buyBelow > 0 ? buyBelow : null,
+    sellAbove: Number.isFinite(sellAbove) && sellAbove >= 0 ? sellAbove : null,
+    batchSize: clamp(batchSize, 1, 1000),
+    lastRunAt: Math.max(0, lastRunAt),
+  };
+};
+
+export const createDefaultMarketAutomation = () =>
+  Object.fromEntries(
+    resourceIds.map((resourceId) => [
+      resourceId,
+      {
+        buyBelow: null,
+        sellAbove: null,
+        batchSize: DEFAULT_AUTO_MARKET_BATCH_SIZE,
+        lastRunAt: 0,
+      },
+    ]),
+  ) as Record<ResourceId, MarketAutomationRule>;
+
 export const createInitialGameState = (now = Date.now()): GameState => ({
   version: SAVE_VERSION,
   rngSeed: DEFAULT_RNG_SEED,
   createdAt: now,
   lastSavedAt: now,
   totalGameSeconds: 0,
-  money: 150,
+  money: 100,
   resources: createResourceRecord({
-    coal: 20,
-    iron_ore: 18,
-    stone: 36,
-    wood: 48,
-    vegetables: 90,
-    food: 45,
-    iron_bars: 4,
+    coal: 12,
+    iron_ore: 10,
+    stone: 24,
+    wood: 30,
+    vegetables: 55,
+    food: 24,
+    iron_bars: 1,
   }),
   workers: {
-    total: 8,
+    total: 6,
     housingCapacity: 8,
   },
   buildings: Object.fromEntries(
@@ -96,6 +126,7 @@ export const createInitialGameState = (now = Date.now()): GameState => ({
   market: Object.fromEntries(
     resourceIds.map((resourceId) => [resourceId, { pressure: 1 }]),
   ) as Record<ResourceId, MarketResourceState>,
+  marketAutomation: createDefaultMarketAutomation(),
   books: {
     owned: {},
   },
@@ -117,6 +148,7 @@ export const sanitizeGameState = (value: unknown, now = Date.now()): GameState =
   const rawResources = isObject(value.resources) ? value.resources : {};
   const rawBuildings = isObject(value.buildings) ? value.buildings : {};
   const rawMarket = isObject(value.market) ? value.market : {};
+  const rawMarketAutomation = isObject(value.marketAutomation) ? value.marketAutomation : {};
   const rawBooks = isObject(value.books) ? value.books : {};
   const rawOwnedBooks = isObject(rawBooks.owned) ? rawBooks.owned : {};
   const rawOffline = isObject(value.offline) ? value.offline : {};
@@ -171,6 +203,7 @@ export const sanitizeGameState = (value: unknown, now = Date.now()): GameState =
     next.market[resourceId] = {
       pressure: clamp(asFiniteNumber(rawMarketResource.pressure, 1), 0.25, 4),
     };
+    next.marketAutomation[resourceId] = normalizeAutomationRule(rawMarketAutomation[resourceId]);
   }
 
   for (const [key, count] of Object.entries(rawOwnedBooks)) {

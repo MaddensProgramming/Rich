@@ -14,6 +14,7 @@ import {
   hydrateGameState,
   prepareGameStateForSave,
   sellResource as sellResourceInState,
+  setMarketAutomationRule as setMarketAutomationRuleInState,
   setRecipe as setRecipeInState,
   stopOfflineBoost as stopOfflineBoostInState,
   tickGame,
@@ -28,6 +29,7 @@ import type {
   BuildingId,
   GameState,
   MarketPrice,
+  MarketAutomationRule,
   RecipeId,
   ResourceId,
 } from '../simulation';
@@ -98,6 +100,10 @@ export interface GameStore extends GameState {
   setRecipe: (buildingId: BuildingId, recipeId: RecipeId) => void;
   buyResource: (resourceId: ResourceId, quantity: number) => void;
   sellResource: (resourceId: ResourceId, quantity: number) => void;
+  setMarketAutomationRule: (
+    resourceId: ResourceId,
+    patch: Partial<Omit<MarketAutomationRule, 'lastRunAt'>>,
+  ) => void;
   upgradeBuilding: (buildingId: BuildingId) => void;
   buyBookPack: () => void;
   equipBook: (
@@ -157,6 +163,10 @@ export const useGameStore = create<GameStore>((set, get) => {
 
     sellResource: (resourceId, quantity) => {
       set((state) => withDerivedState(sellResourceInState(state, resourceId, quantity)));
+    },
+
+    setMarketAutomationRule: (resourceId, patch) => {
+      set((state) => withDerivedState(setMarketAutomationRuleInState(state, resourceId, patch)));
     },
 
     upgradeBuilding: (buildingId) => {
