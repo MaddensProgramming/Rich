@@ -7,6 +7,7 @@ import {
   MIN_CONTRACT_REWARD_TO_SELL_VALUE_WITH_BOOKS,
   MIN_SHARE,
   getAllContractEconomyReports,
+  getAllBuildingValueProductionReports,
   getAllProjectBalanceReports,
   getProjectEffort,
 } from './balance';
@@ -54,6 +55,31 @@ describe('contract balance', () => {
         report.rewardToSellValue,
         `${report.contractId} pays ${(report.rewardToSellValue * 100).toFixed(1)}% of market sell value`,
       ).toBeGreaterThanOrEqual(minimum);
+    }
+  });
+});
+
+describe('building value production balance', () => {
+  it('reports each building by best villager value production', () => {
+    const reports = getAllBuildingValueProductionReports();
+
+    expect(reports.map((report) => report.buildingId)).toEqual([
+      'mine',
+      'lumberjack',
+      'farm',
+      'food_maker',
+      'smelter',
+      'blacksmith',
+      'stonemason',
+    ]);
+
+    for (const report of reports) {
+      expect(report.recipes.length, `${report.buildingId} recipes`).toBeGreaterThan(0);
+      expect(
+        Number.isFinite(report.valuePerWorkerSecond),
+        `${report.buildingId} value per worker-second`,
+      ).toBe(true);
+      expect(Number.isFinite(report.relativeToMedian), `${report.buildingId} relative value`).toBe(true);
     }
   });
 });

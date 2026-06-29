@@ -1,8 +1,15 @@
-import { buildingById, recipes } from '../data/buildings';
+import { buildingById, buildings, recipeById, recipes } from '../data/buildings';
 import { resourceById, resourceIds } from '../data/resources';
 import { chapterUpgradeProjects } from '../data/chapterProjects';
 import { contracts } from '../data/contracts';
-import type { ChapterUpgradeProjectDefinition, ContractDefinition, ResourceId } from './types';
+import type {
+  BuildingId,
+  ChapterUpgradeProjectDefinition,
+  ContractDefinition,
+  RecipeDefinition,
+  RecipeId,
+  ResourceId,
+} from './types';
 
 /**
  * Balance tooling.
@@ -177,6 +184,111 @@ export const getProjectBalanceReport = (
 
 export const getAllProjectBalanceReports = (): ProjectBalanceReport[] =>
   chapterUpgradeProjects.map((project) => getProjectBalanceReport(project));
+
+export const WEAK_BUILDING_VALUE_RATIO = 0.85;
+export const STRONG_BUILDING_VALUE_RATIO = 1.15;
+
+export type BuildingValueRating = 'weak' | 'balanced' | 'strong';
+
+export interface RecipeValueProductionLine {
+  recipeId: RecipeId;
+  label: string;
+  grossValuePerRun: number;
+  inputValuePerRun: number;
+  netValuePerRun: number;
+  valuePerWorkerSecond: number;
+}
+
+export interface BuildingValueProductionReport {
+  buildingId: BuildingId;
+  label: string;
+  bestRecipeId: RecipeId;
+  valuePerWorkerSecond: number;
+  relativeToMedian: number;
+  rating: BuildingValueRating;
+  recipes: RecipeValueProductionLine[];
+}
+
+const getResourceMarketValue = (resourceId: ResourceId, amount = 0): number =>
+  amount * resourceById[resourceId].basePrice;
+
+export const getRecipeValueProductionLine = (
+  recipe: RecipeDefinition,
+): RecipeValueProductionLine => {
+  const building = buildingById[recipe.buildingId];
+  let grossValuePerRun = 0;
+  let inputValuePerRun = 0;
+
+  for (const resourceId of resourceIds) {
+    grossValuePerRun += getResourceMarketValue(resourceId, recipe.outputs[resourceId] ?? 0);
+    inputValuePerRun += getResourceMarketValue(resourceId, recipe.inputs[resourceId] ?? 0);
+  }
+
+  const netValuePerRun = grossValuePerRun - inputValuePerRun;
+
+  return {
+    recipeId: recipe.id,
+    label: recipe.label,
+    grossValuePerRun,
+    inputValuePerRun,
+    netValuePerRun,
+    valuePerWorkerSecond: netValuePerRun * building.baseProductionMultiplier,
+  };
+};
+
+const getMedian = (values: number[]): number => {
+  if (values.length === 0) {
+    return 0;
+  }
+
+  const sorted = [...values].sort((left, right) => left - right);
+  const middle = Math.floor(sorted.length / 2);
+
+  return sorted.length % 2 === 0 ? (sorted[middle - 1] + sorted[middle]) / 2 : sorted[middle];
+};
+
+const getBuildingValueRating = (relativeToMedian: number): BuildingValueRating => {
+  if (relativeToMedian <= WEAK_BUILDING_VALUE_RATIO) {
+    return 'weak';
+  }
+
+  if (relativeToMedian >= STRONG_BUILDING_VALUE_RATIO) {
+    return 'strong';
+  }
+
+  return 'balanced';
+};
+
+export const getAllBuildingValueProductionReports = (): BuildingValueProductionReport[] => {
+  const baseReports = buildings.map((building) => {
+    const recipeLines = building.recipes.map((recipeId) =>
+      getRecipeValueProductionLine(recipeById[recipeId]),
+    );
+    const bestRecipe = recipeLines.reduce((best, recipe) =>
+      recipe.valuePerWorkerSecond > best.valuePerWorkerSecond ? recipe : best,
+    );
+
+    return {
+      buildingId: building.id,
+      label: building.label,
+      bestRecipeId: bestRecipe.recipeId,
+      valuePerWorkerSecond: bestRecipe.valuePerWorkerSecond,
+      recipes: recipeLines,
+    };
+  });
+
+  const median = getMedian(baseReports.map((report) => report.valuePerWorkerSecond));
+
+  return baseReports.map((report) => {
+    const relativeToMedian = median > 0 ? report.valuePerWorkerSecond / median : 0;
+
+    return {
+      ...report,
+      relativeToMedian,
+      rating: getBuildingValueRating(relativeToMedian),
+    };
+  });
+};
 
 export const MIN_CONTRACT_REWARD_TO_SELL_VALUE = 1;
 export const MIN_CONTRACT_REWARD_TO_SELL_VALUE_WITH_BOOKS = 0.85;
