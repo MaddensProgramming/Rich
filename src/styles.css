@@ -198,7 +198,7 @@ p {
 
 .resource-strip {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(112px, 1fr));
   gap: 4px;
   align-content: start;
   align-items: start;
@@ -296,10 +296,10 @@ p {
 }
 
 .resource-pill {
-  height: 24px;
-  min-height: 24px;
+  height: 28px;
+  min-height: 28px;
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-columns: auto minmax(5ch, max-content) minmax(3ch, auto);
   align-items: center;
   gap: 4px;
   padding: 3px 5px;
@@ -317,29 +317,238 @@ p {
 }
 
 .resource-icon {
-  width: 16px;
-  height: 16px;
-  display: inline-grid;
+  width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   place-items: center;
   flex: 0 0 auto;
   border: 1px solid #9fb0a8;
   border-radius: 999px;
   color: #f8fbf5;
-  background: var(--forest);
-  font-size: 0.58rem;
-  font-weight: 800;
+  background: linear-gradient(145deg, #3f675a, #24473d);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22);
+}
+
+.resource-icon svg {
+  width: 17px;
+  height: 17px;
+  display: block;
+}
+
+.resource-icon .fill {
+  fill: currentColor;
+}
+
+.resource-icon .stroke {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.55;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.resource-icon .carrot {
+  fill: #d97935;
+}
+
+.resource-icon .carrot-wrinkle {
+  fill: #8f4522;
+}
+
+.resource-icon .leaf {
+  fill: #62ad5c;
+}
+
+.resource-icon .crust {
+  fill: #c7893e;
+}
+
+.resource-icon .crust-shadow {
+  fill: #8a552b;
+}
+
+.resource-icon .crumb {
+  fill: #f0d28a;
+}
+
+.resource-icon .crust-mark {
+  fill: #996334;
+}
+
+.resource-icon .bark {
+  fill: #8b5a2d;
+}
+
+.resource-icon .cut {
+  fill: #d5a463;
+}
+
+.resource-icon .wood-ring,
+.resource-icon .wood-knot {
+  fill: #674020;
+}
+
+.resource-icon .bark-dark {
+  fill: #70421f;
+}
+
+.resource-icon .rock {
+  fill: #a9b3ae;
+}
+
+.resource-icon .rock-shadow {
+  fill: #596662;
+}
+
+.resource-icon .rock-light {
+  fill: #d8ded9;
+}
+
+.resource-icon .rock-facet {
+  fill: #828d88;
+}
+
+.resource-icon .block-light {
+  fill: #c6cec9;
+}
+
+.resource-icon .coal {
+  fill: #242b2c;
+}
+
+.resource-icon .coal-light {
+  fill: #536060;
+}
+
+.resource-icon .coal-shine {
+  fill: #788281;
+}
+
+.resource-icon .ore {
+  fill: #747a78;
+}
+
+.resource-icon .ore-light {
+  fill: #aeb8b2;
+}
+
+.resource-icon .vein {
+  fill: #c77b48;
+}
+
+.resource-icon .vein-light {
+  fill: #e0a05f;
+}
+
+.resource-icon .metal {
+  fill: #c4d2d1;
+}
+
+.resource-icon .metal-dark {
+  fill: #7f9696;
+}
+
+.resource-icon .blade {
+  fill: #dbe8e7;
+}
+
+.resource-icon .hilt-fill {
+  fill: #a77536;
+}
+
+.resource-icon .pommel {
+  fill: #67452b;
+}
+
+.resource-icon .plank {
+  fill: #9e5f2e;
+}
+
+.resource-icon .plank-light {
+  fill: #d08c45;
+}
+
+.resource-icon .plank-dark {
+  fill: #6c3e1f;
+}
+
+.resource-icon .tool-head {
+  fill: #b7c3bf;
+}
+
+.resource-icon .block {
+  fill: #909b96;
+}
+
+.resource-icon .block-dark {
+  fill: #697570;
+}
+
+.resource-icon .block-top {
+  fill: #b8c1bc;
+}
+
+.resource-icon-vegetables {
+  background: linear-gradient(145deg, #3f7a49, #234f35);
+}
+
+.resource-icon-food {
+  background: linear-gradient(145deg, #a76131, #6d3f24);
+}
+
+.resource-icon-wood,
+.resource-icon-planks {
+  background: linear-gradient(145deg, #284b40, #172e28);
+}
+
+.resource-icon-bows {
+  background: linear-gradient(145deg, #8a5c35, #4d341f);
+}
+
+.resource-icon-stone,
+.resource-icon-stone_blocks {
+  background: linear-gradient(145deg, #516866, #253936);
+}
+
+.resource-icon-coal {
+  background: linear-gradient(145deg, #9a8b6c, #61533d);
+}
+
+.resource-icon-iron_ore,
+.resource-icon-iron_bars,
+.resource-icon-swords,
+.resource-icon-tools {
+  background: linear-gradient(145deg, #697f80, #314244);
+}
+
+.contract-req .resource-icon,
+.popup-label .resource-icon,
+.project-contribution-row .resource-icon {
+  width: 20px;
+  height: 20px;
+}
+
+.contract-req .resource-icon svg,
+.popup-label .resource-icon svg,
+.project-contribution-row .resource-icon svg {
+  width: 17px;
+  height: 17px;
 }
 
 .resource-pill strong {
-  min-width: 0;
+  min-width: 5ch;
+  justify-self: start;
   font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
   line-height: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  overflow: visible;
   white-space: nowrap;
 }
 
 .rate-positive {
+  justify-self: end;
   color: #327750;
   font-size: 0.62rem;
   white-space: nowrap;
@@ -351,6 +560,7 @@ p {
 }
 
 .resource-pill .rate-negative {
+  justify-self: end;
   font-size: 0.62rem;
   white-space: nowrap;
 }
@@ -1352,7 +1562,7 @@ input[type="checkbox"] {
   }
 
   .resource-strip {
-    grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(112px, 1fr));
   }
 
   .town-section {
@@ -1572,7 +1782,7 @@ input[type="checkbox"] {
 .contract-card strong { font-size: 15px; color: var(--forest-dark); }
 .contract-card p { margin: 4px 0; font-size: 13px; }
 .contract-reqs { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0; }
-.contract-req { font-size: 12px; padding: 2px 8px; border-radius: 999px; background: #fbe6df; border: 1px solid var(--line); }
+.contract-req { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; padding: 2px 8px 2px 3px; border-radius: 999px; background: #fbe6df; border: 1px solid var(--line); }
 .contract-req.met { background: #dff0e2; }
 .contract-reward { font-size: 13px; color: var(--amber); margin-bottom: 6px; }
 .contract-actions { display: flex; gap: 8px; }

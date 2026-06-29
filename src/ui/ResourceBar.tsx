@@ -1,6 +1,7 @@
 import type { GameStore } from '../store/gameStore';
 import { getCampaignChapter, getCurrentUpgradeProject } from '../simulation';
 import { formatNumber, formatSignedRate } from './format';
+import { ResourceIcon } from './ResourceIcon';
 
 interface ResourceBarProps {
   game: GameStore;
@@ -32,9 +33,7 @@ export function ResourceBar({ game }: ResourceBarProps) {
             aria-label={`${resource.label}: ${amountLabel}, ${rateLabel}`}
             title={`${resource.label}: ${amountLabel} (${rateLabel})`}
           >
-            <span className="resource-icon" aria-hidden="true">
-              {resource.icon}
-            </span>
+            <ResourceIcon resourceId={resource.id} />
             <strong>{amountLabel}</strong>
             <span className={net >= 0 ? 'rate-positive' : 'rate-negative'}>{rateLabel}</span>
           </div>

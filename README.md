@@ -86,7 +86,7 @@ Implemented resources:
 - Tools (Mountain Town finished good)
 - Stone Blocks (Mountain Town finished good)
 
-Money is tracked separately from physical resources. Resource definitions include compact icon labels for the top resource bar and project delivery UI.
+Money is tracked separately from physical resources. Resource definitions include compact fallback labels, while the React UI renders stylized SVG resource icons in the resource bar, contracts, gathering UI, and project delivery rows.
 
 ### Market
 

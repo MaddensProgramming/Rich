@@ -41,7 +41,7 @@ const formatCostSummary = (cost: ResourceMap, game: GameStore) => {
   return entries
     .map(([resourceId, amount]) => {
       const resource = game.definitions.resourceById[resourceId as keyof typeof game.resources];
-      return `${resource.icon}${Math.ceil(amount ?? 0)}`;
+      return `${resource.label} ${Math.ceil(amount ?? 0)}`;
     })
     .join(' ');
 };

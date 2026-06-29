@@ -6,6 +6,7 @@ import {
 import type { ResourceId } from '../simulation';
 import type { GameStore } from '../store/gameStore';
 import { formatNumber } from './format';
+import { ResourceIcon } from './ResourceIcon';
 
 interface ContractsPanelProps {
   game: GameStore;
@@ -18,8 +19,13 @@ const renderRequirements = (game: GameStore, required: Partial<Record<ResourceId
       const resource = game.definitions.resourceById[resourceId as ResourceId];
       const have = game.resources[resourceId as ResourceId];
       return (
-        <span key={resourceId} className={have >= (amount ?? 0) ? 'contract-req met' : 'contract-req'}>
-          {resource.icon} {formatNumber(have, 0)}/{amount}
+        <span
+          key={resourceId}
+          className={have >= (amount ?? 0) ? 'contract-req met' : 'contract-req'}
+          title={`${resource.label}: ${formatNumber(have, 0)}/${amount}`}
+        >
+          <ResourceIcon resourceId={resource.id} />
+          {formatNumber(have, 0)}/{amount}
         </span>
       );
     });

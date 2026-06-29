@@ -22,6 +22,7 @@ import { MarketPanel } from './MarketPanel';
 import { ContractsPanel } from './ContractsPanel';
 import { WorkerPanel } from './WorkerPanel';
 import { formatNumber, formatSignedRate } from './format';
+import { ResourceIcon } from './ResourceIcon';
 import type { TownHotspotSelection } from './townHotspots';
 
 interface CampaignDisplay {
@@ -383,9 +384,7 @@ function ProjectPopup({ game, onOpenHotspot }: Pick<TownContextPopupProps, 'game
             <div className="project-contribution-row" key={resourceId}>
               <div>
                 <strong>
-                  <span className="resource-icon" aria-hidden="true">
-                    {definition.icon}
-                  </span>
+                  <ResourceIcon resourceId={definition.id} />
                   {definition.label}
                 </strong>
                 <span>
@@ -533,9 +532,7 @@ function GatheringPopup({ game, onOpenHotspot }: Pick<TownContextPopupProps, 'ga
         {gatherOptions.map(({ resourceId, label, pool }) => (
           <div key={resourceId}>
             <span className="popup-label">
-              <span className="resource-icon" aria-hidden="true">
-                {game.definitions.resourceById[resourceId].icon}
-              </span>
+              <ResourceIcon resourceId={resourceId} />
               {label}
             </span>
             <strong className="popup-strong">{formatNumber(pool, 0)}</strong>
