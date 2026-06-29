@@ -4,6 +4,7 @@ import type {
   BuildingId,
   BuildingState,
   BookKey,
+  CampaignState,
   EquippedBook,
   GameState,
   MarketResourceState,
@@ -169,6 +170,29 @@ export const cloneGameState = (state: GameState): GameState => ({
         Math.max(0, Math.trunc(asFiniteNumber(count, 0))),
       ]),
     ) as Partial<Record<BookKey, number>>,
+  },
+  campaign: {
+    chapterId: state.campaign.chapterId,
+    completedUpgradeProjectIds: [...state.campaign.completedUpgradeProjectIds],
+    upgradeProjectProgress: Object.fromEntries(
+      Object.entries(state.campaign.upgradeProjectProgress).map(([projectId, progress]) => [
+        projectId,
+        Math.max(0, asFiniteNumber(progress, 0)),
+      ]),
+    ) as CampaignState['upgradeProjectProgress'],
+    constructedBuildings: Object.fromEntries(
+      buildingIds.map((buildingId) => [
+        buildingId,
+        Boolean(state.campaign.constructedBuildings[buildingId]),
+      ]),
+    ) as CampaignState['constructedBuildings'],
+    unlockedSystems: {
+      ...state.campaign.unlockedSystems,
+    },
+    clearingWood: Math.max(0, asFiniteNumber(state.campaign.clearingWood, 0)),
+    clearingStone: Math.max(0, asFiniteNumber(state.campaign.clearingStone, 0)),
+    clearingVegetables: Math.max(0, asFiniteNumber(state.campaign.clearingVegetables, 0)),
+    campaignComplete: Boolean(state.campaign.campaignComplete),
   },
   offline: {
     chargeSeconds: Math.max(0, asFiniteNumber(state.offline.chargeSeconds, 0)),

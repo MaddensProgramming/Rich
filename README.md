@@ -1,8 +1,8 @@
-# Mountain Factory Idle
+# St. Moritz
 
-Mountain Factory Idle is a browser idle and management game about growing a mountain town into a small production settlement.
+St. Moritz is a browser idle and management game about rebuilding a mountain settlement through finite campaign chapters.
 
-The current version is a playable prototype built with Vite, React, TypeScript, Phaser, Zustand, and Vitest. The game runs entirely in the browser and saves progress to `localStorage`.
+The current version is a playable first cut of the gameplay overhaul. It uses Vite, React, TypeScript, Phaser, Zustand, and Vitest. The game runs entirely in the browser and saves progress to `localStorage`.
 
 ## Play Online
 
@@ -16,49 +16,51 @@ GitHub Pages must be enabled in the repository settings with **Source** set to *
 
 ## What Is Implemented
 
-### Town and Workers
+### Campaign Chapters
 
-- Start with 1 worker, 8 housing capacity, money, food, and starter resources.
-- Hire workers with money.
-- Upgrade housing with wood and stone.
-- Assign workers across six buildings.
-- Food is consumed by workers over time.
+- New saves start in Chapter 1, Arrival.
+- Arrival begins with 1 worker, no constructed buildings, a larger starter food cushion, manual gathering, and finite clearing pools for wood, stone, and vegetables.
+- The first upgrade project is **Upgrade to Hamlet** with 75 progress required.
+- Wood and stone can be contributed to the Arrival project.
+- Filling a project does not auto-advance the chapter. The player chooses when to advance.
+- Hamlet, Village, Mountain Town, and the Great Hall project are defined in data for the campaign path.
+- Campaign state is owned by the simulation layer and saved with the rest of the game.
+
+### Manual Gathering And Construction
+
+- Arrival supports manual actions for chopping wood, gathering stone, and foraging vegetables.
+- Manual gathering adds 1 resource per click and consumes the matching finite clearing pool.
+- Buildings start unconstructed and must be built before workers can be assigned or production can run.
+- Arrival exposes the Mine Entrance and Logging Camp as the first buildable sites.
+- Farm and Cookhouse unlock in Hamlet.
+- Smelter, Blacksmith, Market, and Library are staged behind later chapter systems.
+
+### Town And Workers
+
+- Workers consume food over time.
 - If food runs out, production drops to 25%.
-- Worker output uses diminishing returns, so additional workers help but are less efficient when stacked into one building.
+- Worker output uses diminishing returns, so extra workers help but are less efficient when stacked into one building.
+- Workers can be hired and housing can be expanded once the player can afford it.
 
-### Buildings and Production
+### Buildings And Production
 
-The prototype includes six buildings:
+The current production building set is:
 
 - Mine
-- Lumberjack
+- Lumberjack / Logging Camp
 - Farm
-- Food Maker
+- Food Maker / Cookhouse
 - Smelter
 - Blacksmith
 
-Implemented production chains:
+Implemented production chains include:
 
-- Mine produces coal, iron ore, and stone.
-- Lumberjack produces wood.
+- Mine produces stone in Arrival, then coal, iron ore, and stone in later chapters.
+- Logging Camp produces wood once constructed.
 - Farm produces vegetables.
 - Food Maker turns vegetables into food.
 - Smelter turns iron ore and coal into iron bars.
 - Blacksmith turns iron bars into swords or wood into bows.
-
-The Mine supports these recipes:
-
-- Coal Focus
-- Iron Focus
-- Stone Focus
-- Balanced Mining
-
-The Blacksmith supports these recipes:
-
-- Forge Swords
-- Craft Bows
-
-Each building can be upgraded to level 5 by spending resources. Higher levels improve production.
 
 ### Resources
 
@@ -74,59 +76,60 @@ Implemented resources:
 - Bows
 - Swords
 
-Money is tracked separately from physical resources.
+Money is tracked separately from physical resources. Resource definitions include compact icon labels for the top resource bar and contribution UI.
 
 ### Market
 
-- All resources can be bought and sold.
+- The market is locked until its chapter system unlocks.
+- All resources can be bought and sold once the market is available.
 - Buy prices are 10% higher than sell prices.
 - Buying raises market pressure and prices.
 - Selling lowers market pressure and prices.
 - Market pressure drifts back toward normal over time.
-- Market pressure is clamped between 0.25x and 4x.
-- Optional auto-buy and auto-sell rules can be configured per resource.
-- Auto-market rules include thresholds and batch sizes.
+- Optional auto-buy and auto-sell rules can be configured per resource once market access is unlocked.
 
-### Library and Books
+### Library And Books
 
-- Book packs cost $120 and contain 3 random books.
-- Book pack rarity odds currently produce Common, Uncommon, and Rare books.
+- The library is locked until Village.
+- Book packs cost $120 and contain 3 random books once unlocked.
 - Books are specific to buildings.
 - Each building can equip up to 2 books.
 - Duplicate books can be upgraded at a rate of 5 copies into 1 copy of the next rarity.
-- Rarities are Common, Uncommon, Rare, Epic, and Legendary.
+- Book effects are ignored until the library system is unlocked.
 
-Implemented book effects include:
+### Save, Load, And Offline Boost
 
-- Resource output multipliers.
-- Input cost reductions.
-- Worker efficiency improvements.
-- Food consumption reduction.
-- Reduced market impact for weapon sales.
-
-### Save, Load, and Offline Boost
-
-- The game saves to browser `localStorage`.
-- Saves include resources, money, workers, housing, buildings, recipes, market state, market automation, books, equipped books, offline charge, and timestamps.
-- The app autosaves every 10 seconds and before page unload.
-- Closing or pausing the game earns offline charge.
-- Offline charge is capped from up to 8 hours away.
-- Offline charge can be spent as a 5x speed boost.
-- A full offline charge provides 20 minutes of boosted game time.
+- The game saves to browser `localStorage` under `st-moritz-save-v2`.
+- The previous `mountain-factory-idle-save-v1` key is still read as a legacy fallback.
 - Save loading sanitizes invalid or outdated data into the current save shape.
+- Saves include campaign state, resources, money, workers, housing, buildings, recipes, market state, books, offline charge, and timestamps.
+- Offline boost is locked in Arrival and unlocks after the settlement reaches Hamlet.
+- Closing or pausing the game earns offline charge only after offline boost is unlocked.
 
 ### UI
 
-- React controls for resources, buildings, market, library, and town state.
-- Phaser town view with clickable buildings.
-- Building panel with worker assignment, recipe selection, production stats, upgrade costs, blocked-production messages, and equipped books.
-- Market panel with prices, pressure, manual trades, and automation controls.
-- Library panel with book pack opening, owned books, equip controls, and upgrades.
-- Town panel for worker hiring, housing upgrades, food usage, offline boost activation, reset, and manual save controls.
+- React displays resources, popups, market, library, town controls, and campaign project progress.
+- Phaser renders the town backdrop and clickable town hotspots.
+- The town image is now the main interaction layer, with generated stage-specific backdrops for Arrival, Hamlet, Village, and Mountain Town.
+- Clicking a hotspot opens one contextual popup at a time.
+- Escape or the close button dismisses the popup.
+- The top bar keeps critical status visible.
+- The project strip shows the current chapter, project progress, and selected hotspot.
 
 ### Tests
 
-Vitest covers the simulation and economy behavior. Current test command:
+Vitest covers the current campaign and economy behavior:
+
+- Fresh saves start in Arrival with no constructed buildings.
+- Manual gathering and finite clearing pools work.
+- Buildings cannot produce before construction.
+- Arrival project contribution does not auto-advance the chapter.
+- Save/load preserves campaign state.
+- Legacy saves migrate into a valid chapter state.
+- Hamlet food production works after construction.
+- Market and library actions respect chapter locks.
+
+Current test command:
 
 ```bash
 npm test
@@ -162,21 +165,20 @@ npm test
 
 Simulation logic is kept separate from React and Phaser.
 
-- `src/simulation/` contains deterministic game rules, save shape handling, tick logic, market math, books, workers, housing, food, and offline boost behavior.
-- `src/data/` contains resource, building, recipe, and book definitions.
+- `src/simulation/` contains deterministic game rules, campaign state, save shape handling, tick logic, market math, books, workers, housing, food, and offline boost behavior.
+- `src/data/` contains resource, building, recipe, book, and chapter project definitions.
 - `src/store/` connects the simulation layer to Zustand and browser storage.
-- `src/ui/` contains React panels and controls.
-- `src/game/` contains the Phaser town scene.
+- `src/ui/` contains React panels, resource bars, contextual popups, and controls.
+- `src/game/` contains the Phaser town scene and hotspot rendering.
 
-UI code should display state and dispatch actions. Production rules, market math, food penalties, books, save/load shape, and offline boost behavior should stay in the simulation layer.
+UI code should display state and dispatch actions. Production rules, chapter advancement, market math, food penalties, books, save/load shape, and offline boost behavior should stay in the simulation layer.
 
 ## Not Yet Implemented
 
-The prototype does not yet include:
-
-- A tutorial or onboarding flow.
-- Long-term unlock progression beyond the first six buildings.
-- Additional book packs for Epic and Legendary targeting.
-- Custom art or animation beyond the current town view.
-- Cloud saves or account-based progress.
-- Advanced balancing pass for late-game pacing.
+- Contracts and town requests.
+- Multi-recipe production slots.
+- Grouped book-card library polish and upgrade-all controls.
+- Dedicated chapter-specific town artwork.
+- Final victory popup polish.
+- Additional late-game resources beyond the current production chains.
+- Full balance pass for the 1.5 to 2 hour campaign target.

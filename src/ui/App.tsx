@@ -1,28 +1,48 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { OFFLINE_BOOST_MULTIPLIER } from '../simulation';
-import type { BuildingId } from '../simulation';
 import { useGameStore } from '../store/gameStore';
-import { BuildingPanel } from './BuildingPanel';
-import { LibraryPanel } from './LibraryPanel';
-import { MarketPanel } from './MarketPanel';
 import { ResourceBar } from './ResourceBar';
+import { TownContextPopup, readCampaignDisplay } from './TownContextPopup';
 import { TownView } from './TownView';
-import { WorkerPanel } from './WorkerPanel';
+import type { TownHotspotSelection } from './townHotspots';
 import { formatNumber } from './format';
-
-type PanelId = 'buildings' | 'market' | 'library' | 'town';
 
 export function App() {
   const game = useGameStore();
-  const [activePanel, setActivePanel] = useState<PanelId>('buildings');
-  const [selectedBuildingId, setSelectedBuildingId] = useState<BuildingId | null>(null);
-  const [selectedBuildingVersion, setSelectedBuildingVersion] = useState(0);
+  const [activeHotspot, setActiveHotspot] = useState<TownHotspotSelection | null>(null);
+  const [activeHotspotVersion, setActiveHotspotVersion] = useState(0);
+  const townInputBlockedUntilRef = useRef(0);
 
-  const selectBuildingFromTown = useCallback((buildingId: BuildingId) => {
-    setSelectedBuildingId(buildingId);
-    setSelectedBuildingVersion((version) => version + 1);
-    setActivePanel('buildings');
+  const campaign = useMemo(() => readCampaignDisplay(game), [game]);
+
+  const selectHotspot = useCallback((selection: TownHotspotSelection) => {
+    if (performance.now() < townInputBlockedUntilRef.current) {
+      return;
+    }
+
+    setActiveHotspot(selection);
+    setActiveHotspotVersion((version) => version + 1);
   }, []);
+
+  const blockTownInputBriefly = useCallback(() => {
+    townInputBlockedUntilRef.current = performance.now() + 180;
+  }, []);
+
+  const closePopup = useCallback(() => {
+    blockTownInputBriefly();
+    setActiveHotspot(null);
+  }, [blockTownInputBriefly]);
+
+  useEffect(() => {
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        closePopup();
+      }
+    };
+
+    window.addEventListener('keydown', closeOnEscape);
+    return () => window.removeEventListener('keydown', closeOnEscape);
+  }, [closePopup]);
 
   useEffect(() => {
     let frameId = 0;
@@ -47,83 +67,97 @@ export function App() {
     };
   }, [game.saveNow]);
 
-  const activePanelContent = useMemo(() => {
-    if (activePanel === 'market') {
-      return <MarketPanel game={game} />;
-    }
-
-    if (activePanel === 'library') {
-      return <LibraryPanel game={game} />;
-    }
-
-    if (activePanel === 'town') {
-      return <WorkerPanel game={game} />;
-    }
-
-    return (
-      <BuildingPanel
-        game={game}
-        selectedBuildingId={selectedBuildingId}
-        selectedBuildingVersion={selectedBuildingVersion}
-      />
-    );
-  }, [activePanel, game, selectedBuildingId, selectedBuildingVersion]);
-
   return (
     <div className="app-shell">
-      <header className="topbar">
-        <div>
-          <h1>Mountain Factory Idle</h1>
-          <span>Game time {formatNumber(game.totalGameSeconds, 0)}s</span>
+      <section className="top-hud" aria-label="Town status">
+        <header className="topbar">
+          <div className="brand-block">
+            <h1>St. Moritz</h1>
+            <span>Game time {formatNumber(game.totalGameSeconds, 0)}s</span>
+          </div>
+          <div className="topbar-metrics">
+            <div>
+              <span>Money</span>
+              <strong>${formatNumber(game.money)}</strong>
+            </div>
+            <div>
+              <span>Workers</span>
+              <strong>
+                {game.workers.total}/{game.workers.housingCapacity}
+              </strong>
+            </div>
+            <div className={game.stats.globalProductionMultiplier < 1 ? 'metric-danger' : ''}>
+              <span>Food</span>
+              <strong>{formatNumber(game.resources.food)}</strong>
+            </div>
+            <div className={game.offline.active ? 'metric-boost' : ''}>
+              <span>Speed</span>
+              <strong>
+                {game.offline.active ? `${OFFLINE_BOOST_MULTIPLIER}x` : `${game.stats.gameSpeed.toFixed(1)}x`}
+              </strong>
+            </div>
+          </div>
+        </header>
+
+        <div className="hud-status-row">
+          <ResourceBar game={game} />
+
+          <section className="campaign-strip" aria-label="Campaign progress">
+            <div className="campaign-copy">
+              <span>{campaign.chapterLabel}</span>
+              <strong>{campaign.projectLabel}</strong>
+              <p>{campaign.unlockLabel}</p>
+            </div>
+            <button
+              className="campaign-progress campaign-button"
+              type="button"
+              onClick={() =>
+                selectHotspot({
+                  id: 'project',
+                  kind: 'project',
+                  label: 'Town Project',
+                })
+              }
+            >
+              <div className="boost-topline">
+                <span>Project progress</span>
+                <strong>{campaign.progressLabel}</strong>
+              </div>
+              <div className="boost-bar campaign-progress-bar" aria-label="Chapter progress">
+                <span style={{ width: `${(campaign.progressRatio ?? 0) * 100}%` }} />
+              </div>
+              <p>{campaign.statusLabel}</p>
+            </button>
+            <div className="campaign-selection">
+              <span>Selection</span>
+              <strong>{activeHotspot?.label ?? 'None selected'}</strong>
+              <p>{activeHotspot?.kind ?? 'Click a town hotspot to open its popup'}</p>
+            </div>
+          </section>
         </div>
-        <div className="topbar-metrics">
-          <div>
-            <span>Money</span>
-            <strong>${formatNumber(game.money)}</strong>
-          </div>
-          <div>
-            <span>Workers</span>
-            <strong>
-              {game.workers.total}/{game.workers.housingCapacity}
-            </strong>
-          </div>
-          <div className={game.stats.globalProductionMultiplier < 1 ? 'metric-danger' : ''}>
-            <span>Food</span>
-            <strong>{formatNumber(game.resources.food)}</strong>
-          </div>
-          <div className={game.offline.active ? 'metric-boost' : ''}>
-            <span>Speed</span>
-            <strong>{game.offline.active ? `${OFFLINE_BOOST_MULTIPLIER}x` : `${game.stats.gameSpeed.toFixed(1)}x`}</strong>
-          </div>
-        </div>
-      </header>
+      </section>
 
-      <ResourceBar game={game} />
-
-      <main className="main-layout">
-        <section className="town-section" aria-label="Town view">
-          <TownView game={game} onSelectBuilding={selectBuildingFromTown} />
-        </section>
-
-        <section className="control-section">
-          <nav className="panel-tabs" aria-label="Panels">
-            {[
-              ['buildings', 'Buildings'],
-              ['market', 'Market'],
-              ['library', 'Library'],
-              ['town', 'Town'],
-            ].map(([id, label]) => (
-              <button
-                className={activePanel === id ? 'active' : ''}
-                key={id}
-                type="button"
-                onClick={() => setActivePanel(id as PanelId)}
-              >
-                {label}
-              </button>
-            ))}
-          </nav>
-          {activePanelContent}
+      <main className="main-stage">
+        <section
+          className={activeHotspot ? 'town-section town-stage popup-open' : 'town-section town-stage'}
+          aria-label="Town view"
+        >
+          <TownView
+            game={game}
+            selectedHotspotId={activeHotspot?.id ?? null}
+            inputLocked={Boolean(activeHotspot)}
+            onSelectHotspot={selectHotspot}
+          />
+          {activeHotspot ? (
+            <TownContextPopup
+              game={game}
+              selection={activeHotspot}
+              selectionVersion={activeHotspotVersion}
+              onClose={closePopup}
+              onPopupPointer={blockTownInputBriefly}
+              onOpenHotspot={selectHotspot}
+            />
+          ) : null}
         </section>
       </main>
     </div>

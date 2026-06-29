@@ -87,6 +87,10 @@ const rollBookRarity = (roll: number): BookRarity => {
 };
 
 export const buyBookPack = (state: GameState): GameState => {
+  if (!state.campaign.unlockedSystems.library) {
+    return state;
+  }
+
   if (state.money + 1e-9 < BASIC_BOOK_PACK_COST) {
     return state;
   }
@@ -123,6 +127,10 @@ export const equipBook = (
   rarity: BookRarity = 'common',
   slotIndex?: number,
 ): GameState => {
+  if (!state.campaign.unlockedSystems.library) {
+    return state;
+  }
+
   if (bookId === null) {
     if (slotIndex === undefined) {
       return state;
@@ -176,6 +184,10 @@ export const equipBook = (
 };
 
 export const upgradeBook = (state: GameState, bookId: BookId, rarity: BookRarity): GameState => {
+  if (!state.campaign.unlockedSystems.library) {
+    return state;
+  }
+
   if (!canUpgradeBook(state, bookId, rarity)) {
     return state;
   }
@@ -211,6 +223,10 @@ export const getBuildingBookEffects = (state: GameState, buildingId: BuildingId)
     efficiencyExponentBonus: 0,
   };
 
+  if (!state.campaign.unlockedSystems.library) {
+    return totals;
+  }
+
   for (const equippedBook of state.buildings[buildingId].equippedBooks) {
     if (getOwnedBookCount(state, equippedBook.bookId, equippedBook.rarity) <= 0) {
       continue;
@@ -243,6 +259,10 @@ export const getBuildingBookEffects = (state: GameState, buildingId: BuildingId)
 };
 
 export const getFoodConsumptionMultiplier = (state: GameState) => {
+  if (!state.campaign.unlockedSystems.library) {
+    return 1;
+  }
+
   let multiplierBonus = 0;
 
   for (const buildingId of buildingIds) {
@@ -262,6 +282,10 @@ export const getFoodConsumptionMultiplier = (state: GameState) => {
 };
 
 export const getMarketSellImpactMultiplier = (state: GameState, resourceId: ResourceId) => {
+  if (!state.campaign.unlockedSystems.library) {
+    return 1;
+  }
+
   let multiplierBonus = 0;
 
   for (const buildingId of buildingIds) {

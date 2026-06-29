@@ -11,6 +11,10 @@ export type ResourceId =
 
 export type ResourceMap = Partial<Record<ResourceId, number>>;
 
+export type ChapterId = 'arrival' | 'hamlet' | 'village' | 'mountain_town';
+
+export type SystemId = 'construction' | 'manualGather' | 'market' | 'library' | 'offlineBoost';
+
 export type BuildingId =
   | 'mine'
   | 'lumberjack'
@@ -57,6 +61,7 @@ export type BookKey = `${BookId}:${BookRarity}`;
 export interface ResourceDefinition {
   id: ResourceId;
   label: string;
+  icon: string;
   basePrice: number;
   marketDepth: number;
   category: 'basic' | 'processed';
@@ -77,6 +82,8 @@ export interface BuildingDefinition {
   recipes: RecipeId[];
   baseProductionMultiplier: number;
   upgradeCosts: Partial<Record<number, ResourceMap>>;
+  constructionCost?: ResourceMap;
+  availableInChapters?: ChapterId[];
 }
 
 export type BookEffect =
@@ -125,6 +132,41 @@ export interface BuildingState {
   equippedBooks: EquippedBook[];
 }
 
+export interface ChapterUpgradeProjectDefinition {
+  id: string;
+  label: string;
+  description: string;
+  targetProgress: number;
+  resourceContributions: Partial<Record<ResourceId, number>>;
+  moneyContributionRate?: number;
+  completionStoryText: string;
+  nextChapterId?: ChapterId;
+}
+
+export interface ChapterDefinition {
+  id: ChapterId;
+  label: string;
+  storyText: string;
+  townBackdropKey: string;
+  availableBuildingIds: BuildingId[];
+  availableRecipeIds: RecipeId[];
+  unlockedSystemIds: SystemId[];
+  upgradeProjectId: string;
+  nextChapterId?: ChapterId;
+}
+
+export interface CampaignState {
+  chapterId: ChapterId;
+  completedUpgradeProjectIds: string[];
+  upgradeProjectProgress: Partial<Record<string, number>>;
+  constructedBuildings: Partial<Record<BuildingId, boolean>>;
+  unlockedSystems: Partial<Record<SystemId, boolean>>;
+  clearingWood: number;
+  clearingStone: number;
+  clearingVegetables: number;
+  campaignComplete: boolean;
+}
+
 export interface MarketResourceState {
   pressure: number;
 }
@@ -171,6 +213,7 @@ export interface GameState {
   books: {
     owned: Partial<Record<BookKey, number>>;
   };
+  campaign: CampaignState;
   offline: OfflineState;
   stats: SimulationStats;
   recentBookPack: EquippedBook[];

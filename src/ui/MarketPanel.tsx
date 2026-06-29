@@ -32,6 +32,7 @@ const parseOptionalAmount = (value: string) => {
 
 export function MarketPanel({ game }: MarketPanelProps) {
   const [tradeQuantity, setTradeQuantity] = useState(10);
+  const [showAutomation, setShowAutomation] = useState(false);
   const normalizedTradeQuantity = Math.max(1, Math.trunc(tradeQuantity));
 
   return (
@@ -61,6 +62,13 @@ export function MarketPanel({ game }: MarketPanelProps) {
               onChange={(event) => setTradeQuantity(Math.max(1, Number(event.currentTarget.value) || 1))}
             />
           </label>
+          <button
+            className={showAutomation ? 'active' : ''}
+            type="button"
+            onClick={() => setShowAutomation((value) => !value)}
+          >
+            Auto
+          </button>
         </div>
       </div>
 
@@ -82,7 +90,7 @@ export function MarketPanel({ game }: MarketPanelProps) {
           const autoSellEnabled = rule.sellAbove !== null;
 
           return (
-            <div className="market-row" key={resource.id}>
+            <div className={showAutomation ? 'market-row automation-visible' : 'market-row'} key={resource.id}>
               <span className="market-resource-name">{resource.label}</span>
               <strong>{formatNumber(game.resources[resource.id])}</strong>
               <span className="price-stack">
@@ -106,73 +114,77 @@ export function MarketPanel({ game }: MarketPanelProps) {
                   Buy x{normalizedTradeQuantity}
                 </button>
               </span>
-              <span className="auto-market-controls">
-                <label className="checkbox-line">
+              {showAutomation ? (
+                <div className="auto-market-controls">
+                  <div className="auto-market-grid">
+                  <label className="checkbox-line">
+                    <input
+                      type="checkbox"
+                      checked={autoBuyEnabled}
+                      onChange={(event) =>
+                        game.setMarketAutomationRule(resource.id, {
+                          buyBelow: event.currentTarget.checked
+                            ? rule.buyBelow ?? getDefaultBuyThreshold(resource.id)
+                            : null,
+                        })
+                      }
+                    />
+                    Buy below
+                  </label>
                   <input
-                    type="checkbox"
-                    checked={autoBuyEnabled}
-                    onChange={(event) =>
-                      game.setMarketAutomationRule(resource.id, {
-                        buyBelow: event.currentTarget.checked
-                          ? rule.buyBelow ?? getDefaultBuyThreshold(resource.id)
-                          : null,
-                      })
-                    }
-                  />
-                  Buy below
-                </label>
-                <input
-                  aria-label={`${resource.label} auto-buy below`}
-                  disabled={!autoBuyEnabled}
-                  min="0"
-                  type="number"
-                  value={rule.buyBelow ?? ''}
-                  onChange={(event) =>
-                    game.setMarketAutomationRule(resource.id, {
-                      buyBelow: parseOptionalAmount(event.currentTarget.value),
-                    })
-                  }
-                />
-                <label className="checkbox-line">
-                  <input
-                    type="checkbox"
-                    checked={autoSellEnabled}
-                    onChange={(event) =>
-                      game.setMarketAutomationRule(resource.id, {
-                        sellAbove: event.currentTarget.checked
-                          ? rule.sellAbove ?? getDefaultSellThreshold(resource.id)
-                          : null,
-                      })
-                    }
-                  />
-                  Sell above
-                </label>
-                <input
-                  aria-label={`${resource.label} auto-sell above`}
-                  disabled={!autoSellEnabled}
-                  min="0"
-                  type="number"
-                  value={rule.sellAbove ?? ''}
-                  onChange={(event) =>
-                    game.setMarketAutomationRule(resource.id, {
-                      sellAbove: parseOptionalAmount(event.currentTarget.value),
-                    })
-                  }
-                />
-                <label className="batch-input">
-                  Batch
-                  <input
-                    min="1"
+                    aria-label={`${resource.label} auto-buy below`}
+                    disabled={!autoBuyEnabled}
+                    min="0"
                     type="number"
-                    value={rule.batchSize}
+                    value={rule.buyBelow ?? ''}
                     onChange={(event) =>
                       game.setMarketAutomationRule(resource.id, {
-                        batchSize: Math.max(1, Number(event.currentTarget.value) || 1),
+                        buyBelow: parseOptionalAmount(event.currentTarget.value),
                       })
                     }
                   />
-                </label>
-              </span>
+                  <label className="checkbox-line">
+                    <input
+                      type="checkbox"
+                      checked={autoSellEnabled}
+                      onChange={(event) =>
+                        game.setMarketAutomationRule(resource.id, {
+                          sellAbove: event.currentTarget.checked
+                            ? rule.sellAbove ?? getDefaultSellThreshold(resource.id)
+                            : null,
+                        })
+                      }
+                    />
+                    Sell above
+                  </label>
+                  <input
+                    aria-label={`${resource.label} auto-sell above`}
+                    disabled={!autoSellEnabled}
+                    min="0"
+                    type="number"
+                    value={rule.sellAbove ?? ''}
+                    onChange={(event) =>
+                      game.setMarketAutomationRule(resource.id, {
+                        sellAbove: parseOptionalAmount(event.currentTarget.value),
+                      })
+                    }
+                  />
+                  <label className="batch-input">
+                    Batch
+                    <input
+                      min="1"
+                      type="number"
+                      value={rule.batchSize}
+                      onChange={(event) =>
+                        game.setMarketAutomationRule(resource.id, {
+                          batchSize: Math.max(1, Number(event.currentTarget.value) || 1),
+                        })
+                      }
+                    />
+                  </label>
+                  </div>
+                </div>
+              ) : null}
             </div>
           );
         })}

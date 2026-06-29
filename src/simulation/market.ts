@@ -107,6 +107,10 @@ export const buyResource = (
   resourceId: ResourceId,
   requestedQuantity: number,
 ): GameState => {
+  if (!state.campaign.unlockedSystems.market) {
+    return state;
+  }
+
   const next = cloneGameState(state);
   if (!buyResourceInPlace(next, resourceId, requestedQuantity)) {
     return state;
@@ -120,6 +124,10 @@ export const sellResource = (
   resourceId: ResourceId,
   requestedQuantity: number,
 ): GameState => {
+  if (!state.campaign.unlockedSystems.market) {
+    return state;
+  }
+
   const next = cloneGameState(state);
   if (!sellResourceInPlace(next, resourceId, requestedQuantity)) {
     return state;
@@ -133,6 +141,10 @@ export const setMarketAutomationRule = (
   resourceId: ResourceId,
   patch: Partial<Omit<MarketAutomationRule, 'lastRunAt'>>,
 ): GameState => {
+  if (!state.campaign.unlockedSystems.market) {
+    return state;
+  }
+
   const current = state.marketAutomation[resourceId];
   const next = cloneGameState(state);
   const batchSize = Math.trunc(asFiniteNumber(patch.batchSize, current.batchSize));
@@ -148,6 +160,10 @@ export const setMarketAutomationRule = (
 };
 
 export const applyMarketAutomation = (state: GameState): GameState => {
+  if (!state.campaign.unlockedSystems.market) {
+    return state;
+  }
+
   const hasDueRule = resourceIds.some((resourceId) => {
     const rule = state.marketAutomation[resourceId];
     const ruleEnabled = rule.buyBelow !== null || rule.sellAbove !== null;

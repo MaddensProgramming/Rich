@@ -16,6 +16,7 @@ import {
   createEmptyStats,
   createResourceMap,
 } from './utils';
+import { getCampaignChapter, isBuildingConstructed } from './gameState';
 
 const MAX_STEP_SECONDS = 1;
 const FOOD_SHORTAGE_PRODUCTION_MULTIPLIER = 0.25;
@@ -75,9 +76,20 @@ const runSimulationStep = (
 
   const globalProductionMultiplier =
     state.resources.food <= 0 ? FOOD_SHORTAGE_PRODUCTION_MULTIPLIER : 1;
+  const chapter = getCampaignChapter(state);
 
   for (const buildingId of buildingIds) {
     const building = state.buildings[buildingId];
+    if (
+      !isBuildingConstructed(state, buildingId) ||
+      !chapter.availableBuildingIds.includes(buildingId) ||
+      !chapter.availableRecipeIds.includes(building.recipeId)
+    ) {
+      totals.effectiveWorkers[buildingId] = 0;
+      delete totals.blockedBuildings[buildingId];
+      continue;
+    }
+
     const workerCount = Math.max(0, building.workers);
 
     if (workerCount <= 0) {

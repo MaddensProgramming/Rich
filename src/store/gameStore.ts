@@ -4,11 +4,17 @@ import { books, bookById, rarities, rarityLabels } from '../data/books';
 import { resources, resourceById, resourceIds } from '../data/resources';
 import {
   activateOfflineBoost as activateOfflineBoostInState,
+  advanceChapter as advanceChapterInState,
   advanceWallClockState,
   assignWorkers as assignWorkersInState,
   buyBookPack as buyBookPackInState,
   buyResource as buyResourceInState,
+  constructBuilding as constructBuildingInState,
+  contributeToUpgradeProject as contributeToUpgradeProjectInState,
   equipBook as equipBookInState,
+  forageVegetables as forageVegetablesInState,
+  gatherClearingWood as gatherClearingWoodInState,
+  gatherLooseStone as gatherLooseStoneInState,
   getMarketPrices,
   hireWorker as hireWorkerInState,
   hydrateGameState,
@@ -32,9 +38,11 @@ import type {
   MarketAutomationRule,
   RecipeId,
   ResourceId,
+  ResourceMap,
 } from '../simulation';
 
-const SAVE_KEY = 'mountain-factory-idle-save-v1';
+const SAVE_KEY = 'st-moritz-save-v2';
+const LEGACY_SAVE_KEY = 'mountain-factory-idle-save-v1';
 
 const getStorage = (): Storage | null => {
   if (typeof window === 'undefined') {
@@ -55,7 +63,7 @@ const readSavedState = (): GameState => {
   }
 
   try {
-    const raw = storage.getItem(SAVE_KEY);
+    const raw = storage.getItem(SAVE_KEY) ?? storage.getItem(LEGACY_SAVE_KEY);
     return raw ? hydrateGameState(JSON.parse(raw)) : createInitialGameState();
   } catch {
     return createInitialGameState();
@@ -105,6 +113,12 @@ export interface GameStore extends GameState {
     patch: Partial<Omit<MarketAutomationRule, 'lastRunAt'>>,
   ) => void;
   upgradeBuilding: (buildingId: BuildingId) => void;
+  constructBuilding: (buildingId: BuildingId) => void;
+  gatherClearingWood: (amount?: number) => void;
+  gatherLooseStone: (amount?: number) => void;
+  forageVegetables: (amount?: number) => void;
+  contributeToUpgradeProject: (contributions: ResourceMap, money?: number) => void;
+  advanceChapter: () => void;
   buyBookPack: () => void;
   equipBook: (
     buildingId: BuildingId,
@@ -171,6 +185,30 @@ export const useGameStore = create<GameStore>((set, get) => {
 
     upgradeBuilding: (buildingId) => {
       set((state) => withDerivedState(upgradeBuildingInState(state, buildingId)));
+    },
+
+    constructBuilding: (buildingId) => {
+      set((state) => withDerivedState(constructBuildingInState(state, buildingId)));
+    },
+
+    gatherClearingWood: (amount) => {
+      set((state) => withDerivedState(gatherClearingWoodInState(state, amount)));
+    },
+
+    gatherLooseStone: (amount) => {
+      set((state) => withDerivedState(gatherLooseStoneInState(state, amount)));
+    },
+
+    forageVegetables: (amount) => {
+      set((state) => withDerivedState(forageVegetablesInState(state, amount)));
+    },
+
+    contributeToUpgradeProject: (contributions, money = 0) => {
+      set((state) => withDerivedState(contributeToUpgradeProjectInState(state, contributions, money)));
+    },
+
+    advanceChapter: () => {
+      set((state) => withDerivedState(advanceChapterInState(state)));
     },
 
     buyBookPack: () => {

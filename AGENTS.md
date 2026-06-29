@@ -2,7 +2,7 @@
 
 ## Project
 
-Mountain Factory Idle is a browser idle/management game. Use `README.md` as the current product and implementation reference.
+St. Moritz is a browser idle/management game. Use `README.md` as the current product and implementation reference.
 
 Recommended stack:
 
