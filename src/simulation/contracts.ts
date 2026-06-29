@@ -5,6 +5,8 @@ import { canAffordResources, cloneGameState, spendResources } from './utils';
 
 const chapterOrder = (chapterId: GameState['campaign']['chapterId']) => chapterIds.indexOf(chapterId);
 
+export const maxAvailableContracts = 2;
+
 export const isContractUnlocked = (state: GameState, contract: ContractDefinition) =>
   Boolean(state.campaign.unlockedSystems.contracts) &&
   chapterOrder(state.campaign.chapterId) >= chapterOrder(contract.minChapterId);
@@ -15,7 +17,7 @@ export const getAvailableContracts = (state: GameState): ContractDefinition[] =>
       isContractUnlocked(state, contract) &&
       !state.campaign.activeContractIds.includes(contract.id) &&
       !state.campaign.completedContractIds.includes(contract.id),
-  );
+  ).slice(0, maxAvailableContracts);
 
 export const getActiveContracts = (state: GameState): ContractDefinition[] =>
   state.campaign.activeContractIds
@@ -23,10 +25,7 @@ export const getActiveContracts = (state: GameState): ContractDefinition[] =>
     .filter((contract): contract is ContractDefinition => Boolean(contract));
 
 export const canAcceptContract = (state: GameState, contractId: string) => {
-  const contract = contractById[contractId];
-  return Boolean(contract) && isContractUnlocked(state, contract) &&
-    !state.campaign.activeContractIds.includes(contractId) &&
-    !state.campaign.completedContractIds.includes(contractId);
+  return getAvailableContracts(state).some((availableContract) => availableContract.id === contractId);
 };
 
 export const acceptContract = (state: GameState, contractId: string): GameState => {

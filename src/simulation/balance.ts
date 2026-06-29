@@ -1,7 +1,8 @@
 import { buildingById, recipes } from '../data/buildings';
 import { resourceById, resourceIds } from '../data/resources';
 import { chapterUpgradeProjects } from '../data/chapterProjects';
-import type { ChapterUpgradeProjectDefinition, ResourceId } from './types';
+import { contracts } from '../data/contracts';
+import type { ChapterUpgradeProjectDefinition, ContractDefinition, ResourceId } from './types';
 
 /**
  * Balance tooling.
@@ -176,3 +177,54 @@ export const getProjectBalanceReport = (
 
 export const getAllProjectBalanceReports = (): ProjectBalanceReport[] =>
   chapterUpgradeProjects.map((project) => getProjectBalanceReport(project));
+
+export const MIN_CONTRACT_REWARD_TO_SELL_VALUE = 1;
+export const MIN_CONTRACT_REWARD_TO_SELL_VALUE_WITH_BOOKS = 0.85;
+
+export interface ContractEconomyLine {
+  key: ResourceId;
+  amount: number;
+  effort: number;
+  sellValue: number;
+}
+
+export interface ContractEconomyReport {
+  contractId: string;
+  rewardMoney: number;
+  hasBookRewards: boolean;
+  totalEffort: number;
+  baseSellValue: number;
+  rewardToSellValue: number;
+  lines: ContractEconomyLine[];
+}
+
+export const getContractEconomyReport = (contract: ContractDefinition): ContractEconomyReport => {
+  const lines: ContractEconomyLine[] = [];
+
+  for (const resourceId of resourceIds) {
+    const amount = contract.requiredResources[resourceId] ?? 0;
+    if (amount > 0) {
+      lines.push({
+        key: resourceId,
+        amount,
+        effort: amount * getResourceUnitCost(resourceId),
+        sellValue: amount * resourceById[resourceId].basePrice,
+      });
+    }
+  }
+
+  const totalEffort = lines.reduce((sum, line) => sum + line.effort, 0);
+  const baseSellValue = lines.reduce((sum, line) => sum + line.sellValue, 0);
+  return {
+    contractId: contract.id,
+    rewardMoney: contract.rewardMoney,
+    hasBookRewards: Boolean(contract.rewardBooks?.length),
+    totalEffort,
+    baseSellValue,
+    rewardToSellValue: baseSellValue > 0 ? contract.rewardMoney / baseSellValue : 0,
+    lines,
+  };
+};
+
+export const getAllContractEconomyReports = (): ContractEconomyReport[] =>
+  contracts.map((contract) => getContractEconomyReport(contract));

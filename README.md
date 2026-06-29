@@ -119,6 +119,7 @@ Money is tracked separately from physical resources. Resource definitions includ
 
 - Town requests unlock in Village and continue into Mountain Town.
 - Each contract lists required goods and pays money, sometimes plus a book reward.
+- The finite contract queue contains 10 total contracts and shows at most 2 available offers at a time.
 - Accept a contract to track it, deliver when goods are in stock, or abandon it.
 - Contracts give weapons and surplus goods a midgame purpose and a money sink.
 
@@ -156,7 +157,8 @@ Vitest covers the current campaign and economy behavior:
 - Market and library actions respect chapter locks.
 - Storyteller seen-chapter and victory tracking survive save/load.
 - Library upgrade-all and upgrade-all-possible promote duplicates correctly.
-- Contracts unlock by chapter, consume goods, and grant money and book rewards.
+- Contracts unlock by chapter, show up to two offers at a time, consume goods, and grant money and book rewards.
+- Contract balance checks keep the finite queue at 10 requests and prevent money rewards from falling below market sell value unless book rewards offset part of the value.
 - The balance model keeps every project requirement line between 8% and 60% of total effort, with total effort rising each chapter.
 
 Current test command:

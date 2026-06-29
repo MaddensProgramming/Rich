@@ -22,6 +22,7 @@ import {
   completeContract,
   hydrateGameState,
   markStorySeen,
+  maxAvailableContracts,
   prepareGameStateForSave,
   sanitizeGameState,
   setRecipe,
@@ -290,7 +291,7 @@ describe('simulation campaign cut', () => {
 
   it('accepts and completes contracts, consuming goods and granting rewards', () => {
     const village = reachVillage();
-    expect(getAvailableContracts(village).length).toBeGreaterThan(0);
+    expect(getAvailableContracts(village)).toHaveLength(maxAvailableContracts);
 
     let state = acceptContract(village, 'mountain_road');
     expect(state.campaign.activeContractIds).toContain('mountain_road');
@@ -302,11 +303,52 @@ describe('simulation campaign cut', () => {
 
     const moneyBefore = state.money;
     const done = completeContract(state, 'mountain_road');
-    expect(done.money).toBe(moneyBefore + 420);
+    expect(done.money).toBe(moneyBefore + 720);
     expect(done.resources.wood).toBe(80);
     expect(done.resources.stone).toBe(110);
     expect(done.campaign.completedContractIds).toContain('mountain_road');
     expect(getAvailableContracts(done).some((c) => c.id === 'mountain_road')).toBe(false);
+  });
+
+  it('shows two contract offers at a time from the finite queue', () => {
+    const village = reachVillage();
+
+    expect(getAvailableContracts(village).map((contract) => contract.id)).toEqual([
+      'mountain_road',
+      'garrison_order',
+    ]);
+    expect(acceptContract(village, 'bridge_repair')).toBe(village);
+
+    let state = acceptContract(village, 'mountain_road');
+    expect(getAvailableContracts(state).map((contract) => contract.id)).toEqual([
+      'garrison_order',
+      'bridge_repair',
+    ]);
+
+    state = acceptContract(state, 'garrison_order');
+    expect(getAvailableContracts(state).map((contract) => contract.id)).toEqual([
+      'bridge_repair',
+      'harvest_relief',
+    ]);
+  });
+
+  it('runs out after ten total contracts', () => {
+    let state = reachMountainTown();
+    for (const resourceId of Object.keys(state.resources) as Array<keyof typeof state.resources>) {
+      state.resources[resourceId] = 10_000;
+    }
+
+    let completed = 0;
+    let nextContract = getAvailableContracts(state)[0];
+    while (nextContract) {
+      state = acceptContract(state, nextContract.id);
+      state = completeContract(state, nextContract.id);
+      completed += 1;
+      nextContract = getAvailableContracts(state)[0];
+    }
+
+    expect(completed).toBe(10);
+    expect(getAvailableContracts(state)).toHaveLength(0);
   });
 
   it('keeps contracts locked before their chapter', () => {
