@@ -936,36 +936,6 @@ input[type="checkbox"] {
   justify-items: center;
 }
 
-.book-tile-wrap::after {
-  content: attr(data-tooltip);
-  position: absolute;
-  left: 50%;
-  bottom: calc(100% + 8px);
-  z-index: 20;
-  width: max-content;
-  max-width: 250px;
-  padding: 8px 9px;
-  border: 1px solid #8c9c94;
-  border-radius: 6px;
-  color: #f8fbf5;
-  background: rgba(27, 38, 34, 0.96);
-  box-shadow: 0 12px 30px rgba(20, 32, 28, 0.28);
-  font-size: 0.72rem;
-  line-height: 1.35;
-  text-align: left;
-  white-space: pre-line;
-  opacity: 0;
-  pointer-events: none;
-  transform: translate(-50%, 4px);
-  transition: opacity 120ms ease, transform 120ms ease;
-}
-
-.book-tile-wrap:hover::after,
-.book-tile-wrap:focus-within::after {
-  opacity: 1;
-  transform: translate(-50%, 0);
-}
-
 .book-tile {
   position: relative;
   width: 58px;
@@ -1095,6 +1065,32 @@ input[type="checkbox"] {
   padding: 0 5px;
   font-size: 0.62rem;
   font-weight: 800;
+}
+
+.book-tooltip-floating {
+  position: fixed;
+  z-index: 100;
+  width: max-content;
+  max-width: min(280px, calc(100vw - 24px));
+  padding: 8px 9px;
+  border: 1px solid #8c9c94;
+  border-radius: 6px;
+  color: #f8fbf5;
+  background: rgba(27, 38, 34, 0.96);
+  box-shadow: 0 12px 30px rgba(20, 32, 28, 0.28);
+  font-size: 0.72rem;
+  line-height: 1.35;
+  text-align: left;
+  white-space: pre-line;
+  pointer-events: none;
+}
+
+.book-tooltip-floating.above {
+  transform: translate(-50%, -100%);
+}
+
+.book-tooltip-floating.below {
+  transform: translateX(-50%);
 }
 
 .popup-section {

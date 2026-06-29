@@ -49,6 +49,11 @@ export function App() {
     setActiveHotspotVersion((version) => version + 1);
   }, []);
 
+  const openHotspotFromPopup = useCallback((selection: TownHotspotSelection) => {
+    setActiveHotspot(selection);
+    setActiveHotspotVersion((version) => version + 1);
+  }, []);
+
   const blockTownInputBriefly = useCallback(() => {
     townInputBlockedUntilRef.current = performance.now() + 180;
   }, []);
@@ -183,7 +188,7 @@ export function App() {
               selectionVersion={activeHotspotVersion}
               onClose={closePopup}
               onPopupPointer={blockTownInputBriefly}
-              onOpenHotspot={selectHotspot}
+              onOpenHotspot={openHotspotFromPopup}
             />
           ) : null}
         </section>

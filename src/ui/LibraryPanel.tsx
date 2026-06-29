@@ -1,3 +1,4 @@
+import { useCallback, useState } from 'react';
 import {
   BASIC_BOOK_PACK_COST,
   BOOK_UPGRADE_COPY_COST,
@@ -11,6 +12,13 @@ import type { GameStore } from '../store/gameStore';
 
 interface LibraryPanelProps {
   game: GameStore;
+}
+
+interface BookTooltip {
+  text: string;
+  left: number;
+  top: number;
+  placement: 'above' | 'below';
 }
 
 const effectKindLabels: Record<BookEffect['type'], string> = {
@@ -31,6 +39,7 @@ const getBookInitials = (label: string) =>
     .toUpperCase();
 
 export function LibraryPanel({ game }: LibraryPanelProps) {
+  const [bookTooltip, setBookTooltip] = useState<BookTooltip | null>(null);
   const ownedBooks = ownedBookEntries(game);
   const hasAnyUpgradable = ownedBooks.some((entry) => canUpgradeBook(game, entry.bookId, entry.rarity));
   const groupedBooks = game.definitions.buildings
@@ -41,6 +50,26 @@ export function LibraryPanel({ game }: LibraryPanelProps) {
       ),
     }))
     .filter((group) => group.entries.length > 0);
+
+  const showBookTooltip = useCallback((text: string, element: HTMLElement) => {
+    const rect = element.getBoundingClientRect();
+    const tooltipWidth = Math.min(280, window.innerWidth - 24);
+    const left = Math.min(
+      window.innerWidth - tooltipWidth / 2 - 12,
+      Math.max(tooltipWidth / 2 + 12, rect.left + rect.width / 2),
+    );
+    const aboveTop = rect.top - 8;
+    const belowTop = rect.bottom + 8;
+
+    setBookTooltip({
+      text,
+      left,
+      top: aboveTop > 96 ? aboveTop : belowTop,
+      placement: aboveTop > 96 ? 'above' : 'below',
+    });
+  }, []);
+
+  const hideBookTooltip = useCallback(() => setBookTooltip(null), []);
 
   return (
     <section className="panel library-panel" aria-label="Library">
@@ -119,8 +148,11 @@ export function LibraryPanel({ game }: LibraryPanelProps) {
                     return (
                       <article
                         className={`book-tile-wrap${equippedIndex >= 0 ? ' equipped' : ''}`}
-                        data-tooltip={tooltip}
                         key={`${entry.bookId}-${entry.rarity}`}
+                        onBlur={hideBookTooltip}
+                        onFocus={(event) => showBookTooltip(tooltip, event.currentTarget)}
+                        onMouseEnter={(event) => showBookTooltip(tooltip, event.currentTarget)}
+                        onMouseLeave={hideBookTooltip}
                       >
                         <button
                           className={`book-tile rarity-${entry.rarity} effect-${definition.effect.type}`}
@@ -133,7 +165,6 @@ export function LibraryPanel({ game }: LibraryPanelProps) {
                                 : game.equipBook(definition.buildingId, entry.bookId, entry.rarity, 0)
                           }
                           aria-label={tooltip}
-                          title={tooltip}
                         >
                           <span className="book-cover" aria-hidden="true">
                             <span className="book-spine" />
@@ -204,6 +235,15 @@ export function LibraryPanel({ game }: LibraryPanelProps) {
           })
         )}
       </div>
+      {bookTooltip ? (
+        <div
+          className={`book-tooltip-floating ${bookTooltip.placement}`}
+          style={{ left: bookTooltip.left, top: bookTooltip.top }}
+          role="tooltip"
+        >
+          {bookTooltip.text}
+        </div>
+      ) : null}
     </section>
   );
 }
