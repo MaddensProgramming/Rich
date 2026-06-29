@@ -1,7 +1,15 @@
 import { chapterById, chapterUpgradeProjectById } from '../data/chapterProjects';
 import { buildingById } from '../data/buildings';
 import { resourceIds } from '../data/resources';
-import type { BuildingId, GameState, RecipeId, ResourceId, ResourceMap } from './types';
+import type {
+  BuildingId,
+  ChapterId,
+  ChapterUpgradeProjectDefinition,
+  GameState,
+  RecipeId,
+  ResourceId,
+  ResourceMap,
+} from './types';
 import {
   clamp,
   cloneGameState,
@@ -9,7 +17,7 @@ import {
   spendResources,
   sumAssignedWorkers,
 } from './utils';
-import { getCampaignChapter, isBuildingConstructed } from './gameState';
+import { getCampaignChapter, isBuildingConstructed, isSecondRecipeSlotUnlocked } from './gameState';
 
 export const MAX_BUILDING_LEVEL = 5;
 
@@ -36,17 +44,66 @@ export const getCurrentUpgradeProject = (state: GameState) => {
   return chapterUpgradeProjectById[chapter.upgradeProjectId];
 };
 
-export const getCurrentUpgradeProjectProgress = (state: GameState) => {
+export const getUpgradeProjectDeliveries = (
+  state: GameState,
+  projectId: string,
+): Partial<Record<ResourceId, number>> => state.campaign.upgradeProjectDeliveries[projectId] ?? {};
+
+export const getUpgradeProjectMoneyDelivered = (state: GameState, projectId: string): number =>
+  Math.max(0, state.campaign.upgradeProjectMoneyDelivered[projectId] ?? 0);
+
+const getUpgradeProjectRequirementLines = (project: ChapterUpgradeProjectDefinition) => {
+  const lines: { resourceId: ResourceId; required: number }[] = [];
+  for (const resourceId of resourceIds) {
+    const required = project.requirements[resourceId] ?? 0;
+    if (required > 0) {
+      lines.push({ resourceId, required });
+    }
+  }
+  return lines;
+};
+
+export const isUpgradeProjectComplete = (state: GameState, projectId: string): boolean => {
+  const project = chapterUpgradeProjectById[projectId];
+  if (!project) {
+    return false;
+  }
+
+  const deliveries = getUpgradeProjectDeliveries(state, projectId);
+  for (const { resourceId, required } of getUpgradeProjectRequirementLines(project)) {
+    if ((deliveries[resourceId] ?? 0) + 1e-6 < required) {
+      return false;
+    }
+  }
+
+  const moneyRequired = project.moneyRequirement ?? 0;
+  return getUpgradeProjectMoneyDelivered(state, projectId) + 1e-6 >= moneyRequired;
+};
+
+export const getCurrentUpgradeProjectProgress = (state: GameState): number => {
   const project = getCurrentUpgradeProject(state);
-  return Math.min(
-    project.targetProgress,
-    Math.max(0, state.campaign.upgradeProjectProgress[project.id] ?? 0),
-  );
+  const deliveries = getUpgradeProjectDeliveries(state, project.id);
+  const fractions: number[] = [];
+
+  for (const { resourceId, required } of getUpgradeProjectRequirementLines(project)) {
+    fractions.push(clamp((deliveries[resourceId] ?? 0) / required, 0, 1));
+  }
+
+  const moneyRequired = project.moneyRequirement ?? 0;
+  if (moneyRequired > 0) {
+    fractions.push(clamp(getUpgradeProjectMoneyDelivered(state, project.id) / moneyRequired, 0, 1));
+  }
+
+  if (fractions.length === 0) {
+    return 1;
+  }
+
+  return fractions.reduce((sum, value) => sum + value, 0) / fractions.length;
 };
 
 export const canAdvanceChapter = (state: GameState) => {
   const project = getCurrentUpgradeProject(state);
-  return getCurrentUpgradeProjectProgress(state) >= project.targetProgress;
+  return isUpgradeProjectComplete(state, project.id);
 };
 
 const getFirstAvailableRecipeId = (state: GameState, buildingId: BuildingId) => {
@@ -138,6 +195,66 @@ export const setRecipe = (state: GameState, buildingId: BuildingId, recipeId: Re
 
   const next = cloneGameState(state);
   next.buildings[buildingId].recipeId = recipeId;
+  if (next.buildings[buildingId].secondaryRecipeId === recipeId) {
+    next.buildings[buildingId].secondaryRecipeId = null;
+  }
+  return next;
+};
+
+export const canUseSecondRecipeSlot = (state: GameState, buildingId: BuildingId) =>
+  isBuildingConstructed(state, buildingId) &&
+  isBuildingAvailableInCurrentChapter(state, buildingId) &&
+  isSecondRecipeSlotUnlocked(state, buildingId);
+
+export const setSecondaryRecipe = (
+  state: GameState,
+  buildingId: BuildingId,
+  recipeId: RecipeId | null,
+): GameState => {
+  if (!isBuildingConstructed(state, buildingId)) {
+    return state;
+  }
+
+  if (recipeId === null) {
+    if (state.buildings[buildingId].secondaryRecipeId === null) {
+      return state;
+    }
+    const next = cloneGameState(state);
+    next.buildings[buildingId].secondaryRecipeId = null;
+    return next;
+  }
+
+  const definition = buildingById[buildingId];
+  if (
+    !canUseSecondRecipeSlot(state, buildingId) ||
+    !definition.recipes.includes(recipeId) ||
+    !isRecipeAvailableInCurrentChapter(state, recipeId) ||
+    recipeId === state.buildings[buildingId].recipeId
+  ) {
+    return state;
+  }
+
+  const next = cloneGameState(state);
+  next.buildings[buildingId].secondaryRecipeId = recipeId;
+  return next;
+};
+
+export const setWorkerShare = (
+  state: GameState,
+  buildingId: BuildingId,
+  share: number,
+): GameState => {
+  if (!isBuildingConstructed(state, buildingId) || !Number.isFinite(share)) {
+    return state;
+  }
+
+  const clampedShare = clamp(share, 0.1, 0.9);
+  if (Math.abs(clampedShare - state.buildings[buildingId].workerShare) < 1e-9) {
+    return state;
+  }
+
+  const next = cloneGameState(state);
+  next.buildings[buildingId].workerShare = clampedShare;
   return next;
 };
 
@@ -204,61 +321,63 @@ export const contributeToUpgradeProject = (
   requestedMoney = 0,
 ): GameState => {
   const project = getCurrentUpgradeProject(state);
-  const currentProgress = getCurrentUpgradeProjectProgress(state);
-  if (currentProgress >= project.targetProgress) {
+  if (isUpgradeProjectComplete(state, project.id)) {
     return state;
   }
 
-  let remainingProgress = project.targetProgress - currentProgress;
   const next = cloneGameState(state);
-  let nextProgress = currentProgress;
+  const deliveries = { ...getUpgradeProjectDeliveries(state, project.id) };
+  let changed = false;
 
   for (const resourceId of resourceIds) {
-    const requestedAmount = Math.max(0, Math.trunc(contributions[resourceId] ?? 0));
-    const contributionRate = project.resourceContributions[resourceId] ?? 0;
-    if (requestedAmount <= 0 || contributionRate <= 0 || remainingProgress <= 0) {
+    const required = project.requirements[resourceId] ?? 0;
+    if (required <= 0) {
       continue;
     }
 
-    const spendable = Math.min(
-      requestedAmount,
-      next.resources[resourceId],
-      remainingProgress / contributionRate,
-    );
+    const already = deliveries[resourceId] ?? 0;
+    const remaining = required - already;
+    if (remaining <= 0) {
+      continue;
+    }
+
+    const requestedAmount = Math.max(0, Math.trunc(contributions[resourceId] ?? 0));
+    const spendable = Math.min(requestedAmount, Math.floor(next.resources[resourceId]), remaining);
     if (spendable <= 0) {
       continue;
     }
 
     next.resources[resourceId] -= spendable;
-    const progress = spendable * contributionRate;
-    nextProgress += progress;
-    remainingProgress -= progress;
+    deliveries[resourceId] = already + spendable;
+    changed = true;
   }
 
-  const moneyRate = project.moneyContributionRate ?? 0;
-  const moneyAmount = Math.max(0, Math.trunc(requestedMoney));
-  if (moneyRate > 0 && moneyAmount > 0 && remainingProgress > 0) {
-    const spendableMoney = Math.min(moneyAmount, next.money, remainingProgress / moneyRate);
-    if (spendableMoney > 0) {
-      next.money -= spendableMoney;
-      const progress = spendableMoney * moneyRate;
-      nextProgress += progress;
-      remainingProgress -= progress;
+  const moneyRequired = project.moneyRequirement ?? 0;
+  if (moneyRequired > 0) {
+    const alreadyMoney = getUpgradeProjectMoneyDelivered(state, project.id);
+    const remainingMoney = moneyRequired - alreadyMoney;
+    if (remainingMoney > 0) {
+      const requestedMoneyAmount = Math.max(0, Math.trunc(requestedMoney));
+      const spendableMoney = Math.min(requestedMoneyAmount, Math.floor(next.money), remainingMoney);
+      if (spendableMoney > 0) {
+        next.money -= spendableMoney;
+        next.campaign.upgradeProjectMoneyDelivered[project.id] = alreadyMoney + spendableMoney;
+        changed = true;
+      }
     }
   }
 
-  const clampedProgress = Math.min(project.targetProgress, nextProgress);
-  if (clampedProgress <= currentProgress + 1e-9) {
+  if (!changed) {
     return state;
   }
 
-  next.campaign.upgradeProjectProgress[project.id] = clampedProgress;
+  next.campaign.upgradeProjectDeliveries[project.id] = deliveries;
   return next;
 };
 
 export const advanceChapter = (state: GameState): GameState => {
   const project = getCurrentUpgradeProject(state);
-  if (getCurrentUpgradeProjectProgress(state) < project.targetProgress) {
+  if (!isUpgradeProjectComplete(state, project.id)) {
     return state;
   }
 
@@ -270,7 +389,6 @@ export const advanceChapter = (state: GameState): GameState => {
   next.campaign.completedUpgradeProjectIds = Array.from(
     new Set([...next.campaign.completedUpgradeProjectIds, project.id]),
   );
-  next.campaign.upgradeProjectProgress[project.id] = project.targetProgress;
   if (!project.nextChapterId) {
     next.campaign.campaignComplete = true;
     return next;
@@ -286,6 +404,27 @@ export const advanceChapter = (state: GameState): GameState => {
     next.campaign.unlockedSystems[systemId] = true;
   }
 
+  return next;
+};
+
+export const markStorySeen = (state: GameState, segmentId: ChapterId | 'victory'): GameState => {
+  if (segmentId === 'victory') {
+    if (state.campaign.seenVictory) {
+      return state;
+    }
+    const next = cloneGameState(state);
+    next.campaign.seenVictory = true;
+    return next;
+  }
+
+  if (state.campaign.seenStoryChapters.includes(segmentId)) {
+    return state;
+  }
+
+  const next = cloneGameState(state);
+  next.campaign.seenStoryChapters = Array.from(
+    new Set([...next.campaign.seenStoryChapters, segmentId]),
+  );
   return next;
 };
 

@@ -7,7 +7,7 @@ import {
   OFFLINE_BOOST_MULTIPLIER,
 } from './gameState';
 import { applyMarketAutomation, driftMarketPressureInPlace } from './market';
-import type { BuildingId, GameState, ResourceMap } from './types';
+import type { BuildingId, GameState, RecipeId, ResourceMap } from './types';
 import {
   addResourceMap,
   asFiniteNumber,
@@ -16,7 +16,7 @@ import {
   createEmptyStats,
   createResourceMap,
 } from './utils';
-import { getCampaignChapter, isBuildingConstructed } from './gameState';
+import { getCampaignChapter, isBuildingConstructed, isSecondRecipeSlotUnlocked } from './gameState';
 
 const MAX_STEP_SECONDS = 1;
 const FOOD_SHORTAGE_PRODUCTION_MULTIPLIER = 0.25;
@@ -98,79 +98,108 @@ const runSimulationStep = (
     }
 
     const definition = buildingById[buildingId];
-    const recipe = recipeById[building.recipeId];
     const bookEffects = getBuildingBookEffects(state, buildingId);
     const exponent = clamp(
       0.85 + (building.level - 1) * 0.015 + bookEffects.efficiencyExponentBonus,
       0.65,
       0.97,
     );
-    const effectiveWorkers = workerCount ** exponent;
     const buildingMultiplier = definition.baseProductionMultiplier * (1 + (building.level - 1) * 0.25);
-    const recipeRuns = effectiveWorkers * buildingMultiplier * globalProductionMultiplier * deltaSeconds;
 
-    totals.effectiveWorkers[buildingId] = effectiveWorkers;
+    const secondaryActive =
+      building.secondaryRecipeId !== null &&
+      building.secondaryRecipeId !== building.recipeId &&
+      chapter.availableRecipeIds.includes(building.secondaryRecipeId) &&
+      isSecondRecipeSlotUnlocked(state, buildingId);
 
-    if (recipeRuns <= 0) {
-      continue;
+    const slots: { recipeId: RecipeId; workers: number }[] = [];
+    if (secondaryActive) {
+      const share = clamp(building.workerShare, 0.1, 0.9);
+      slots.push({ recipeId: building.recipeId, workers: workerCount * share });
+      slots.push({ recipeId: building.secondaryRecipeId as RecipeId, workers: workerCount * (1 - share) });
+    } else {
+      slots.push({ recipeId: building.recipeId, workers: workerCount });
     }
 
-    const requiredInputs: ResourceMap = {};
-    let bottleneck = 1;
+    let totalEffectiveWorkers = 0;
+    let blockedMessage: string | undefined;
 
-    for (const resourceId of resourceIds) {
-      const baseInput = recipe.inputs[resourceId] ?? 0;
-      if (baseInput <= 0) {
+    for (const slot of slots) {
+      if (slot.workers <= 0) {
         continue;
       }
 
-      const required =
-        baseInput * getInputMultiplier(bookEffects.inputMultiplierBonus, resourceId) * recipeRuns;
-      requiredInputs[resourceId] = required;
-      bottleneck = Math.min(bottleneck, required > 0 ? state.resources[resourceId] / required : 1);
+      const recipe = recipeById[slot.recipeId];
+      const effectiveWorkers = slot.workers ** exponent;
+      totalEffectiveWorkers += effectiveWorkers;
+      const recipeRuns = effectiveWorkers * buildingMultiplier * globalProductionMultiplier * deltaSeconds;
+
+      if (recipeRuns <= 0) {
+        continue;
+      }
+
+      const requiredInputs: ResourceMap = {};
+      let bottleneck = 1;
+
+      for (const resourceId of resourceIds) {
+        const baseInput = recipe.inputs[resourceId] ?? 0;
+        if (baseInput <= 0) {
+          continue;
+        }
+
+        const required =
+          baseInput * getInputMultiplier(bookEffects.inputMultiplierBonus, resourceId) * recipeRuns;
+        requiredInputs[resourceId] = required;
+        bottleneck = Math.min(bottleneck, required > 0 ? state.resources[resourceId] / required : 1);
+      }
+
+      const scale = clamp(bottleneck, 0, 1);
+      if (scale < 0.999) {
+        const missingResource = resourceIds.find(
+          (resourceId) => (requiredInputs[resourceId] ?? 0) > state.resources[resourceId] + 1e-9,
+        );
+        blockedMessage = missingResource
+          ? `Short on ${missingResource.replace('_', ' ')}`
+          : 'Input limited';
+      }
+
+      if (scale <= 1e-9) {
+        continue;
+      }
+
+      for (const resourceId of resourceIds) {
+        const consumed = (requiredInputs[resourceId] ?? 0) * scale;
+        if (consumed > 0) {
+          state.resources[resourceId] = Math.max(0, state.resources[resourceId] - consumed);
+          totals.consumed[resourceId] = (totals.consumed[resourceId] ?? 0) + consumed;
+          totals.buildingConsumed[buildingId][resourceId] =
+            (totals.buildingConsumed[buildingId][resourceId] ?? 0) + consumed;
+        }
+      }
+
+      const produced: ResourceMap = {};
+      for (const resourceId of resourceIds) {
+        const baseOutput = recipe.outputs[resourceId] ?? 0;
+        if (baseOutput <= 0) {
+          continue;
+        }
+
+        produced[resourceId] =
+          baseOutput * getOutputMultiplier(bookEffects.outputMultiplierBonus, resourceId) * recipeRuns * scale;
+      }
+
+      addResourceMap(totals.produced, produced);
+      addResourceMap(totals.buildingProduced[buildingId], produced);
+      for (const resourceId of resourceIds) {
+        state.resources[resourceId] += produced[resourceId] ?? 0;
+      }
     }
 
-    const scale = clamp(bottleneck, 0, 1);
-    if (scale < 0.999) {
-      const missingResource = resourceIds.find(
-        (resourceId) => (requiredInputs[resourceId] ?? 0) > state.resources[resourceId] + 1e-9,
-      );
-      totals.blockedBuildings[buildingId] = missingResource
-        ? `Short on ${missingResource.replace('_', ' ')}`
-        : 'Input limited';
+    totals.effectiveWorkers[buildingId] = totalEffectiveWorkers;
+    if (blockedMessage) {
+      totals.blockedBuildings[buildingId] = blockedMessage;
     } else {
       delete totals.blockedBuildings[buildingId];
-    }
-
-    if (scale <= 1e-9) {
-      continue;
-    }
-
-    for (const resourceId of resourceIds) {
-      const consumed = (requiredInputs[resourceId] ?? 0) * scale;
-      if (consumed > 0) {
-        state.resources[resourceId] = Math.max(0, state.resources[resourceId] - consumed);
-        totals.consumed[resourceId] = (totals.consumed[resourceId] ?? 0) + consumed;
-        totals.buildingConsumed[buildingId][resourceId] =
-          (totals.buildingConsumed[buildingId][resourceId] ?? 0) + consumed;
-      }
-    }
-
-    const produced: ResourceMap = {};
-    for (const resourceId of resourceIds) {
-      const baseOutput = recipe.outputs[resourceId] ?? 0;
-      if (baseOutput <= 0) {
-        continue;
-      }
-
-      produced[resourceId] =
-        baseOutput * getOutputMultiplier(bookEffects.outputMultiplierBonus, resourceId) * recipeRuns * scale;
-    }
-
-    addResourceMap(totals.produced, produced);
-    addResourceMap(totals.buildingProduced[buildingId], produced);
-    for (const resourceId of resourceIds) {
-      state.resources[resourceId] += produced[resourceId] ?? 0;
     }
   }
 

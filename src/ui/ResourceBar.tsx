@@ -14,7 +14,7 @@ export function ResourceBar({ game }: ResourceBarProps) {
       const recipe = game.definitions.recipeById[recipeId];
       return [...Object.keys(recipe.inputs), ...Object.keys(recipe.outputs)];
     }),
-    ...Object.keys(project.resourceContributions),
+    ...Object.keys(project.requirements),
     'food',
     ...(game.campaign.unlockedSystems.manualGather ? ['vegetables'] : []),
   ]);

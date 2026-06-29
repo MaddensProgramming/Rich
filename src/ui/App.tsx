@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { OFFLINE_BOOST_MULTIPLIER } from '../simulation';
 import { useGameStore } from '../store/gameStore';
 import { ResourceBar } from './ResourceBar';
+import { Storyteller } from './Storyteller';
+import { storySegmentById, type StorySegmentId } from '../data/story';
 import { TownContextPopup, readCampaignDisplay } from './TownContextPopup';
 import { TownView } from './TownView';
 import type { TownHotspotSelection } from './townHotspots';
@@ -14,6 +16,29 @@ export function App() {
   const townInputBlockedUntilRef = useRef(0);
 
   const campaign = useMemo(() => readCampaignDisplay(game), [game]);
+
+  const [storyOverride, setStoryOverride] = useState<StorySegmentId | null>(null);
+
+  const autoStorySegment: StorySegmentId | null = game.campaign.campaignComplete && !game.campaign.seenVictory
+    ? 'victory'
+    : game.campaign.seenStoryChapters.includes(game.campaign.chapterId)
+      ? null
+      : game.campaign.chapterId;
+
+  const activeStorySegment = storyOverride ?? autoStorySegment;
+
+  const dismissStory = useCallback(() => {
+    if (autoStorySegment) {
+      game.markStorySeen(autoStorySegment);
+    }
+    setStoryOverride(null);
+  }, [autoStorySegment, game.markStorySeen]);
+
+  const openStory = useCallback(() => {
+    setStoryOverride(
+      game.campaign.campaignComplete ? 'victory' : game.campaign.chapterId,
+    );
+  }, [game.campaign.campaignComplete, game.campaign.chapterId]);
 
   const selectHotspot = useCallback((selection: TownHotspotSelection) => {
     if (performance.now() < townInputBlockedUntilRef.current) {
@@ -107,6 +132,9 @@ export function App() {
               <span>{campaign.chapterLabel}</span>
               <strong>{campaign.projectLabel}</strong>
               <p>{campaign.unlockLabel}</p>
+              <button className="story-reopen" type="button" onClick={openStory}>
+                Storyteller
+              </button>
             </div>
             <button
               className="campaign-progress campaign-button"
@@ -160,6 +188,10 @@ export function App() {
           ) : null}
         </section>
       </main>
+
+      {activeStorySegment ? (
+        <Storyteller segment={storySegmentById[activeStorySegment]} onDismiss={dismissStory} />
+      ) : null}
     </div>
   );
 }

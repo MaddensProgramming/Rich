@@ -1,4 +1,5 @@
 import { chapterById, chapterUpgradeProjectById } from '../data/chapterProjects';
+import { contractById } from '../data/contracts';
 import { buildingById, buildingIds } from '../data/buildings';
 import { bookById, rarities } from '../data/books';
 import { resourceIds } from '../data/resources';
@@ -28,6 +29,8 @@ export const DEFAULT_AUTO_MARKET_BATCH_SIZE = 10;
 export const INITIAL_CLEARING_WOOD = 60;
 export const INITIAL_CLEARING_STONE = 45;
 export const INITIAL_CLEARING_VEGETABLES = 35;
+export const SECOND_RECIPE_SLOT_LEVEL = 3;
+export const DEFAULT_WORKER_SHARE = 0.5;
 
 const initialWorkers: Record<BuildingId, number> = {
   mine: 0,
@@ -36,6 +39,7 @@ const initialWorkers: Record<BuildingId, number> = {
   food_maker: 0,
   smelter: 0,
   blacksmith: 0,
+  stonemason: 0,
 };
 
 const initialRecipes: Record<BuildingId, BuildingState['recipeId']> = {
@@ -45,6 +49,7 @@ const initialRecipes: Record<BuildingId, BuildingState['recipeId']> = {
   food_maker: 'food_maker_basic_food',
   smelter: 'smelter_iron_bars',
   blacksmith: 'blacksmith_bows',
+  stonemason: 'stonemason_blocks',
 };
 
 const isObject = (value: unknown): value is Record<string, unknown> =>
@@ -111,6 +116,7 @@ const normalizeUnlockedSystems = (
       market: Boolean(rawSystems.market),
       library: Boolean(rawSystems.library),
       offlineBoost: Boolean(rawSystems.offlineBoost),
+      contracts: Boolean(rawSystems.contracts),
     },
   );
 };
@@ -118,7 +124,8 @@ const normalizeUnlockedSystems = (
 const createDefaultCampaignState = (): CampaignState => ({
   chapterId: 'arrival',
   completedUpgradeProjectIds: [],
-  upgradeProjectProgress: {},
+  upgradeProjectDeliveries: {},
+  upgradeProjectMoneyDelivered: {},
   constructedBuildings: createDefaultConstructedBuildings(false),
   unlockedSystems: {
     construction: true,
@@ -126,11 +133,16 @@ const createDefaultCampaignState = (): CampaignState => ({
     market: false,
     library: false,
     offlineBoost: false,
+    contracts: false,
   },
   clearingWood: INITIAL_CLEARING_WOOD,
   clearingStone: INITIAL_CLEARING_STONE,
   clearingVegetables: INITIAL_CLEARING_VEGETABLES,
   campaignComplete: false,
+  seenStoryChapters: [],
+  seenVictory: false,
+  activeContractIds: [],
+  completedContractIds: [],
 });
 
 const hasLegacyBuildingProgress = (rawBuildings: Record<string, unknown>) =>
@@ -157,10 +169,41 @@ const normalizeCampaignState = (
       : initialChapterId;
   const chapter = chapterById[chapterId];
   const rawConstructedBuildings = isObject(raw.constructedBuildings) ? raw.constructedBuildings : {};
-  const rawProgress = isObject(raw.upgradeProjectProgress) ? raw.upgradeProjectProgress : {};
+  const rawDeliveries = isObject(raw.upgradeProjectDeliveries) ? raw.upgradeProjectDeliveries : {};
+  const rawMoneyDelivered = isObject(raw.upgradeProjectMoneyDelivered)
+    ? raw.upgradeProjectMoneyDelivered
+    : {};
   const rawCompletedProjects = Array.isArray(raw.completedUpgradeProjectIds)
     ? raw.completedUpgradeProjectIds
     : [];
+
+  const normalizedDeliveries: Partial<Record<string, Partial<Record<ResourceId, number>>>> = {};
+  for (const [projectId, value] of Object.entries(rawDeliveries)) {
+    if (!(projectId in chapterUpgradeProjectById) || !isObject(value)) {
+      continue;
+    }
+    const projectDeliveries: Partial<Record<ResourceId, number>> = {};
+    for (const resourceId of resourceIds) {
+      const amount = Math.max(0, asFiniteNumber(value[resourceId], 0));
+      if (amount > 0) {
+        projectDeliveries[resourceId] = amount;
+      }
+    }
+    if (Object.keys(projectDeliveries).length > 0) {
+      normalizedDeliveries[projectId] = projectDeliveries;
+    }
+  }
+
+  const normalizedMoneyDelivered: Partial<Record<string, number>> = {};
+  for (const [projectId, value] of Object.entries(rawMoneyDelivered)) {
+    if (!(projectId in chapterUpgradeProjectById)) {
+      continue;
+    }
+    const amount = Math.max(0, asFiniteNumber(value, 0));
+    if (amount > 0) {
+      normalizedMoneyDelivered[projectId] = amount;
+    }
+  }
 
   return {
     chapterId,
@@ -168,11 +211,8 @@ const normalizeCampaignState = (
       (projectId): projectId is string =>
         typeof projectId === 'string' && projectId in chapterUpgradeProjectById,
     ),
-    upgradeProjectProgress: Object.fromEntries(
-      Object.entries(rawProgress)
-        .filter(([, value]) => typeof value === 'number' && Number.isFinite(value))
-        .map(([projectId, value]) => [projectId, Math.max(0, asFiniteNumber(value, 0))]),
-    ),
+    upgradeProjectDeliveries: normalizedDeliveries,
+    upgradeProjectMoneyDelivered: normalizedMoneyDelivered,
     constructedBuildings: Object.fromEntries(
       buildingIds.map((buildingId) => [
         buildingId,
@@ -203,6 +243,16 @@ const normalizeCampaignState = (
       asFiniteNumber(raw.clearingVegetables, legacyProgress ? 0 : fallback.clearingVegetables),
     ),
     campaignComplete: Boolean(raw.campaignComplete),
+    seenStoryChapters: Array.isArray(raw.seenStoryChapters)
+      ? raw.seenStoryChapters.filter((id): id is ChapterId => isChapterId(id))
+      : [],
+    seenVictory: Boolean(raw.seenVictory),
+    activeContractIds: (Array.isArray(raw.activeContractIds) ? raw.activeContractIds : []).filter(
+      (id): id is string => typeof id === 'string' && id in contractById,
+    ),
+    completedContractIds: (Array.isArray(raw.completedContractIds) ? raw.completedContractIds : []).filter(
+      (id): id is string => typeof id === 'string' && id in contractById,
+    ),
   };
 };
 
@@ -210,6 +260,17 @@ export const isBuildingConstructed = (state: GameState, buildingId: BuildingId) 
   Boolean(state.campaign.constructedBuildings[buildingId]);
 
 export const getCampaignChapter = (state: GameState) => chapterById[state.campaign.chapterId];
+
+export const getChapterAvailableRecipes = (state: GameState, buildingId: BuildingId) => {
+  const chapter = getCampaignChapter(state);
+  return buildingById[buildingId].recipes.filter((recipeId) =>
+    chapter.availableRecipeIds.includes(recipeId),
+  );
+};
+
+export const isSecondRecipeSlotUnlocked = (state: GameState, buildingId: BuildingId) =>
+  state.buildings[buildingId].level >= SECOND_RECIPE_SLOT_LEVEL &&
+  getChapterAvailableRecipes(state, buildingId).length >= 2;
 
 export const createDefaultMarketAutomation = () =>
   Object.fromEntries(
@@ -252,6 +313,8 @@ export const createInitialGameState = (now = Date.now()): GameState => ({
         level: 1,
         workers: initialWorkers[buildingId],
         recipeId: initialRecipes[buildingId],
+        secondaryRecipeId: null,
+        workerShare: DEFAULT_WORKER_SHARE,
         equippedBooks: [],
       },
     ]),
@@ -324,11 +387,21 @@ export const sanitizeGameState = (value: unknown, now = Date.now()): GameState =
     const assignedWorkers = Math.min(requestedWorkers, remainingAssignableWorkers);
     remainingAssignableWorkers -= assignedWorkers;
 
+    const rawSecondaryRecipeId = rawBuilding.secondaryRecipeId;
+    const secondaryRecipeId =
+      typeof rawSecondaryRecipeId === 'string' &&
+      definition.recipes.includes(rawSecondaryRecipeId as never) &&
+      rawSecondaryRecipeId !== recipeId
+        ? (rawSecondaryRecipeId as BuildingState['recipeId'])
+        : null;
+
     next.buildings[buildingId] = {
       id: buildingId,
       level: clamp(Math.trunc(asFiniteNumber(rawBuilding.level, 1)), 1, 5),
       workers: assignedWorkers,
       recipeId,
+      secondaryRecipeId,
+      workerShare: clamp(asFiniteNumber(rawBuilding.workerShare, DEFAULT_WORKER_SHARE), 0.1, 0.9),
       equippedBooks: normalizeEquippedBooks(rawBuilding.equippedBooks, buildingId),
     };
   }
@@ -372,6 +445,14 @@ export const sanitizeGameState = (value: unknown, now = Date.now()): GameState =
       }
     }
 
+    if (
+      building.secondaryRecipeId &&
+      (building.secondaryRecipeId === building.recipeId ||
+        !currentChapter.availableRecipeIds.includes(building.secondaryRecipeId))
+    ) {
+      building.secondaryRecipeId = null;
+    }
+
     if (!next.campaign.constructedBuildings[buildingId] || !buildingAvailable || !fallbackRecipe) {
       building.workers = 0;
     }
@@ -386,6 +467,7 @@ export const sanitizeGameState = (value: unknown, now = Date.now()): GameState =
       market: legacyChapterDefinition.unlockedSystemIds.includes('market'),
       library: legacyChapterDefinition.unlockedSystemIds.includes('library'),
       offlineBoost: legacyChapterDefinition.unlockedSystemIds.includes('offlineBoost'),
+      contracts: legacyChapterDefinition.unlockedSystemIds.includes('contracts'),
     };
   }
 

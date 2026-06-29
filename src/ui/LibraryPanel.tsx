@@ -32,6 +32,7 @@ const getBookInitials = (label: string) =>
 
 export function LibraryPanel({ game }: LibraryPanelProps) {
   const ownedBooks = ownedBookEntries(game);
+  const hasAnyUpgradable = ownedBooks.some((entry) => canUpgradeBook(game, entry.bookId, entry.rarity));
   const groupedBooks = game.definitions.buildings
     .map((building) => ({
       building,
@@ -50,6 +51,14 @@ export function LibraryPanel({ game }: LibraryPanelProps) {
         </div>
         <button type="button" onClick={game.buyBookPack} disabled={game.money < BASIC_BOOK_PACK_COST}>
           Buy Pack ${BASIC_BOOK_PACK_COST}
+        </button>
+        <button
+          type="button"
+          onClick={game.upgradeAllPossibleBooks}
+          disabled={!hasAnyUpgradable}
+          title="Upgrade every book as far as duplicates allow"
+        >
+          Upgrade All Possible
         </button>
       </div>
 
@@ -75,6 +84,18 @@ export function LibraryPanel({ game }: LibraryPanelProps) {
                   <span>
                     {game.buildings[building.id as BuildingId].equippedBooks.length}/2 equipped
                   </span>
+                  <button
+                    type="button"
+                    className="book-group-upgrade-all"
+                    onClick={() => {
+                      const bookIds = new Set(entries.map((entry) => entry.bookId));
+                      bookIds.forEach((bookId) => game.upgradeAllBooks(bookId));
+                    }}
+                    disabled={!entries.some((entry) => canUpgradeBook(game, entry.bookId, entry.rarity))}
+                    title="Upgrade all books for this building"
+                  >
+                    Upgrade All
+                  </button>
                 </div>
                 <div className="book-shelf" aria-label={`${building.label} books`}>
                   {entries.map((entry) => {

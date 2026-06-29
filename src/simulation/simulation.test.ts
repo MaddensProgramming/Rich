@@ -15,31 +15,43 @@ import {
   gatherLooseStone,
   getCurrentUpgradeProject,
   getCurrentUpgradeProjectProgress,
+  getOwnedBookCount,
+  getAvailableContracts,
+  acceptContract,
+  canCompleteContract,
+  completeContract,
   hydrateGameState,
+  markStorySeen,
   prepareGameStateForSave,
   sanitizeGameState,
   setRecipe,
+  setSecondaryRecipe,
+  setWorkerShare,
+  isSecondRecipeSlotUnlocked,
   tickGame,
+  upgradeAllBooks,
+  upgradeAllPossibleBooks,
 } from './index';
 
-const reachHamlet = () => {
-  let state = createInitialGameState(0);
-  state.resources.wood = 200;
-  state.resources.stone = 200;
-  state = contributeToUpgradeProject(state, { wood: 75 });
+const fulfilCurrentProject = (input: ReturnType<typeof createInitialGameState>) => {
+  let state = input;
+  const project = getCurrentUpgradeProject(state);
+  for (const resourceId of Object.keys(state.resources) as Array<keyof typeof state.resources>) {
+    const required = project.requirements[resourceId] ?? 0;
+    state.resources[resourceId] = Math.max(state.resources[resourceId], required + 500);
+  }
+  if (project.moneyRequirement) {
+    state.money = Math.max(state.money, project.moneyRequirement + 500);
+  }
+  state = contributeToUpgradeProject(state, project.requirements, project.moneyRequirement ?? 0);
   return advanceChapter(state);
 };
 
-const reachVillage = () => {
-  let state = reachHamlet();
-  state.resources.wood = 600;
-  state.resources.stone = 600;
-  state.resources.food = 600;
-  state.resources.coal = 600;
-  state.resources.iron_ore = 600;
-  state = contributeToUpgradeProject(state, { wood: 450 });
-  return advanceChapter(state);
-};
+const reachHamlet = () => fulfilCurrentProject(createInitialGameState(0));
+
+const reachVillage = () => fulfilCurrentProject(reachHamlet());
+
+const reachMountainTown = () => fulfilCurrentProject(reachVillage());
 
 describe('simulation campaign cut', () => {
   it('starts in Arrival with no constructed buildings and a finite clearing pool', () => {
@@ -52,6 +64,7 @@ describe('simulation campaign cut', () => {
     expect(state.campaign.unlockedSystems.manualGather).toBe(true);
     expect(state.campaign.unlockedSystems.offlineBoost).toBe(false);
     expect(Object.values(state.campaign.constructedBuildings)).toEqual([
+      false,
       false,
       false,
       false,
@@ -130,33 +143,49 @@ describe('simulation campaign cut', () => {
     state.resources.wood = 100;
     state.resources.stone = 100;
 
-    state = contributeToUpgradeProject(state, { wood: 30, stone: 25 });
+    // Arrival requires wood: 40, stone: 35 (75 units across 2 lines).
+    state = contributeToUpgradeProject(state, { wood: 20, stone: 20 });
 
-    expect(getCurrentUpgradeProjectProgress(state)).toBe(55);
+    expect(getCurrentUpgradeProjectProgress(state)).toBeGreaterThan(0);
+    expect(getCurrentUpgradeProjectProgress(state)).toBeLessThan(1);
     expect(state.campaign.chapterId).toBe('arrival');
     expect(canAdvanceChapter(state)).toBe(false);
 
-    state = contributeToUpgradeProject(state, { wood: 20, stone: 20 });
+    state = contributeToUpgradeProject(state, { wood: 20, stone: 15 });
 
-    expect(getCurrentUpgradeProjectProgress(state)).toBe(75);
+    expect(getCurrentUpgradeProjectProgress(state)).toBe(1);
     expect(canAdvanceChapter(state)).toBe(true);
     expect(state.campaign.chapterId).toBe('arrival');
+    expect(state.campaign.upgradeProjectDeliveries.arrival_upgrade_to_hamlet?.wood).toBe(40);
+    expect(state.campaign.upgradeProjectDeliveries.arrival_upgrade_to_hamlet?.stone).toBe(35);
 
     const advanced = advanceChapter(state);
 
     expect(advanced.campaign.chapterId).toBe('hamlet');
     expect(advanced.campaign.completedUpgradeProjectIds).toContain('arrival_upgrade_to_hamlet');
     expect(advanced.campaign.unlockedSystems.offlineBoost).toBe(true);
-    expect(advanced.campaign.upgradeProjectProgress.arrival_upgrade_to_hamlet).toBe(75);
     expect(getCurrentUpgradeProject(advanced).id).toBe('hamlet_upgrade_to_village');
     expect(canConstructBuilding(advanced, 'farm')).toBe(true);
+  });
+
+  it('cannot over-deliver beyond a project requirement', () => {
+    let state = createInitialGameState(0);
+    state.resources.wood = 1000;
+    state.resources.stone = 1000;
+
+    state = contributeToUpgradeProject(state, { wood: 500, stone: 500 });
+
+    expect(state.campaign.upgradeProjectDeliveries.arrival_upgrade_to_hamlet?.wood).toBe(40);
+    expect(state.campaign.upgradeProjectDeliveries.arrival_upgrade_to_hamlet?.stone).toBe(35);
+    expect(state.resources.wood).toBe(960);
+    expect(state.resources.stone).toBe(965);
   });
 
   it('preserves campaign state on save/load and migrates old saves into a valid chapter', () => {
     let state = createInitialGameState(0);
     state.resources.wood = 100;
     state.resources.stone = 100;
-    state = contributeToUpgradeProject(state, { wood: 75 });
+    state = contributeToUpgradeProject(state, { wood: 40, stone: 35 });
     state = advanceChapter(state);
     state = constructBuilding(state, 'mine');
     state = assignWorkers(state, 'mine', 1);
@@ -223,5 +252,170 @@ describe('simulation campaign cut', () => {
     const afterBookPack = buyBookPack({ ...village, money: 200 });
     expect(afterBookPack.money).toBeLessThan(200);
     expect(afterBookPack.recentBookPack).toHaveLength(3);
+  });
+
+  it('tracks seen story chapters and victory without duplicates', () => {
+    const fresh = createInitialGameState(0);
+    expect(fresh.campaign.seenStoryChapters).toEqual([]);
+    expect(fresh.campaign.seenVictory).toBe(false);
+
+    const seenArrival = markStorySeen(fresh, 'arrival');
+    expect(seenArrival.campaign.seenStoryChapters).toEqual(['arrival']);
+    expect(markStorySeen(seenArrival, 'arrival')).toBe(seenArrival);
+
+    const victory = markStorySeen(fresh, 'victory');
+    expect(victory.campaign.seenVictory).toBe(true);
+    expect(markStorySeen(victory, 'victory')).toBe(victory);
+
+    const reloaded = hydrateGameState(JSON.parse(JSON.stringify(prepareGameStateForSave(victory, 0))), 0);
+    expect(reloaded.campaign.seenVictory).toBe(true);
+  });
+
+  it('upgrades all duplicates of a book and the whole library on demand', () => {
+    const village = reachVillage();
+    const stocked = {
+      ...village,
+      campaign: { ...village.campaign, unlockedSystems: { ...village.campaign.unlockedSystems, library: true } },
+      books: { owned: { 'sharp_axes:common': 5, 'crop_rotation:common': 4 } },
+    };
+
+    const upgraded = upgradeAllBooks(stocked, 'sharp_axes');
+    expect(getOwnedBookCount(upgraded, 'sharp_axes', 'common')).toBe(0);
+    expect(getOwnedBookCount(upgraded, 'sharp_axes', 'uncommon')).toBe(1);
+
+    const allUpgraded = upgradeAllPossibleBooks(stocked);
+    expect(getOwnedBookCount(allUpgraded, 'sharp_axes', 'uncommon')).toBe(1);
+    expect(getOwnedBookCount(allUpgraded, 'crop_rotation', 'common')).toBe(4);
+  });
+
+  it('accepts and completes contracts, consuming goods and granting rewards', () => {
+    const village = reachVillage();
+    expect(getAvailableContracts(village).length).toBeGreaterThan(0);
+
+    let state = acceptContract(village, 'mountain_road');
+    expect(state.campaign.activeContractIds).toContain('mountain_road');
+
+    state = { ...state, resources: { ...state.resources, wood: 0, stone: 0 } };
+    expect(canCompleteContract(state, 'mountain_road')).toBe(false);
+    state = { ...state, resources: { ...state.resources, wood: 200, stone: 200 } };
+    expect(canCompleteContract(state, 'mountain_road')).toBe(true);
+
+    const moneyBefore = state.money;
+    const done = completeContract(state, 'mountain_road');
+    expect(done.money).toBe(moneyBefore + 420);
+    expect(done.resources.wood).toBe(80);
+    expect(done.resources.stone).toBe(110);
+    expect(done.campaign.completedContractIds).toContain('mountain_road');
+    expect(getAvailableContracts(done).some((c) => c.id === 'mountain_road')).toBe(false);
+  });
+
+  it('keeps contracts locked before their chapter', () => {
+    const hamlet = reachHamlet();
+    expect(getAvailableContracts(hamlet)).toHaveLength(0);
+    expect(acceptContract(hamlet, 'mountain_road')).toBe(hamlet);
+  });
+
+  it('unlocks the finished-goods chain only in Mountain Town', () => {
+    const village = reachVillage();
+    expect(village.campaign.chapterId).toBe('village');
+    expect(canConstructBuilding(village, 'stonemason')).toBe(false);
+
+    let state = reachMountainTown();
+    expect(state.campaign.chapterId).toBe('mountain_town');
+    state.workers.total = 3;
+    state.resources.wood = 500;
+    state.resources.stone = 500;
+    state.resources.iron_bars = 200;
+    state.resources.tools = 60;
+    state.resources.food = 500;
+
+    expect(canConstructBuilding(state, 'stonemason')).toBe(true);
+    state = constructBuilding(state, 'lumberjack');
+    state = constructBuilding(state, 'stonemason');
+    state = setRecipe(state, 'lumberjack', 'lumberjack_planks');
+    state = assignWorkers(state, 'lumberjack', 1);
+    state = assignWorkers(state, 'stonemason', 1);
+
+    const before = { planks: state.resources.planks, blocks: state.resources.stone_blocks };
+    const next = tickGame(state, 10);
+
+    expect(next.resources.planks).toBeGreaterThan(before.planks);
+    expect(next.resources.stone_blocks).toBeGreaterThan(before.blocks);
+    expect(next.stats.effectiveWorkers.stonemason).toBeGreaterThan(0);
+  });
+
+  it('accepts dressed stone toward the Great Hall project', () => {
+    let state = reachMountainTown();
+    const project = getCurrentUpgradeProject(state);
+    expect(project.id).toBe('great_hall');
+    expect(project.requirements.stone_blocks ?? 0).toBeGreaterThan(0);
+
+    state.resources.stone_blocks = 50;
+    const before = getCurrentUpgradeProjectProgress(state);
+    state = contributeToUpgradeProject(state, { stone_blocks: 50 });
+
+    expect(getCurrentUpgradeProjectProgress(state)).toBeGreaterThan(before);
+    expect(state.resources.stone_blocks).toBeLessThan(50);
+    expect(state.campaign.upgradeProjectDeliveries.great_hall?.stone_blocks).toBe(50);
+  });
+
+  it('gates the second recipe slot behind level and runs two recipes with split workers', () => {
+    let state = reachHamlet();
+    state.workers.total = 2;
+    state = constructBuilding(state, 'mine');
+    state = assignWorkers(state, 'mine', 2);
+    state = setRecipe(state, 'mine', 'mine_stone_focus');
+
+    expect(isSecondRecipeSlotUnlocked(state, 'mine')).toBe(false);
+    expect(setSecondaryRecipe(state, 'mine', 'mine_coal_focus')).toBe(state);
+
+    state.buildings.mine.level = 3;
+    expect(isSecondRecipeSlotUnlocked(state, 'mine')).toBe(true);
+
+    state = setSecondaryRecipe(state, 'mine', 'mine_coal_focus');
+    expect(state.buildings.mine.secondaryRecipeId).toBe('mine_coal_focus');
+
+    const before = { stone: state.resources.stone, coal: state.resources.coal };
+    const next = tickGame(state, 10);
+
+    expect(next.resources.stone).toBeGreaterThan(before.stone);
+    expect(next.resources.coal).toBeGreaterThan(before.coal);
+    expect(next.stats.effectiveWorkers.mine).toBeGreaterThan(0);
+  });
+
+  it('clears the secondary recipe when it matches the primary and clamps worker share', () => {
+    let state = reachHamlet();
+    state.workers.total = 2;
+    state = constructBuilding(state, 'mine');
+    state = assignWorkers(state, 'mine', 2);
+    state = setRecipe(state, 'mine', 'mine_stone_focus');
+    state.buildings.mine.level = 3;
+
+    state = setSecondaryRecipe(state, 'mine', 'mine_coal_focus');
+    state = setRecipe(state, 'mine', 'mine_coal_focus');
+    expect(state.buildings.mine.secondaryRecipeId).toBeNull();
+
+    state = setSecondaryRecipe(state, 'mine', 'mine_stone_focus');
+    state = setWorkerShare(state, 'mine', 0.95);
+    expect(state.buildings.mine.workerShare).toBeCloseTo(0.9);
+    state = setWorkerShare(state, 'mine', 0.02);
+    expect(state.buildings.mine.workerShare).toBeCloseTo(0.1);
+  });
+
+  it('preserves secondary recipe and worker share across save/load', () => {
+    let state = reachHamlet();
+    state.workers.total = 2;
+    state = constructBuilding(state, 'mine');
+    state = assignWorkers(state, 'mine', 2);
+    state = setRecipe(state, 'mine', 'mine_stone_focus');
+    state.buildings.mine.level = 3;
+    state = setSecondaryRecipe(state, 'mine', 'mine_coal_focus');
+    state = setWorkerShare(state, 'mine', 0.7);
+
+    const saved = prepareGameStateForSave(state, 10_000);
+    const reloaded = hydrateGameState(saved, 10_000);
+
+    expect(reloaded.buildings.mine.secondaryRecipeId).toBe('mine_coal_focus');
+    expect(reloaded.buildings.mine.workerShare).toBeCloseTo(0.7);
   });
 });

@@ -7,13 +7,16 @@ export type ResourceId =
   | 'food'
   | 'iron_bars'
   | 'swords'
-  | 'bows';
+  | 'bows'
+  | 'planks'
+  | 'tools'
+  | 'stone_blocks';
 
 export type ResourceMap = Partial<Record<ResourceId, number>>;
 
 export type ChapterId = 'arrival' | 'hamlet' | 'village' | 'mountain_town';
 
-export type SystemId = 'construction' | 'manualGather' | 'market' | 'library' | 'offlineBoost';
+export type SystemId = 'construction' | 'manualGather' | 'market' | 'library' | 'offlineBoost' | 'contracts';
 
 export type BuildingId =
   | 'mine'
@@ -21,7 +24,8 @@ export type BuildingId =
   | 'farm'
   | 'food_maker'
   | 'smelter'
-  | 'blacksmith';
+  | 'blacksmith'
+  | 'stonemason';
 
 export type RecipeId =
   | 'mine_coal_focus'
@@ -29,11 +33,14 @@ export type RecipeId =
   | 'mine_stone_focus'
   | 'mine_balanced'
   | 'lumberjack_wood'
+  | 'lumberjack_planks'
   | 'farm_vegetables'
   | 'food_maker_basic_food'
   | 'smelter_iron_bars'
   | 'blacksmith_swords'
-  | 'blacksmith_bows';
+  | 'blacksmith_bows'
+  | 'blacksmith_tools'
+  | 'stonemason_blocks';
 
 export type BookRarity = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
 
@@ -129,6 +136,8 @@ export interface BuildingState {
   level: number;
   workers: number;
   recipeId: RecipeId;
+  secondaryRecipeId: RecipeId | null;
+  workerShare: number;
   equippedBooks: EquippedBook[];
 }
 
@@ -136,9 +145,8 @@ export interface ChapterUpgradeProjectDefinition {
   id: string;
   label: string;
   description: string;
-  targetProgress: number;
-  resourceContributions: Partial<Record<ResourceId, number>>;
-  moneyContributionRate?: number;
+  requirements: Partial<Record<ResourceId, number>>;
+  moneyRequirement?: number;
   completionStoryText: string;
   nextChapterId?: ChapterId;
 }
@@ -155,16 +163,37 @@ export interface ChapterDefinition {
   nextChapterId?: ChapterId;
 }
 
+export interface ContractRewardBook {
+  bookId: BookId;
+  rarity: BookRarity;
+  count: number;
+}
+
+export interface ContractDefinition {
+  id: string;
+  label: string;
+  description: string;
+  minChapterId: ChapterId;
+  requiredResources: Partial<Record<ResourceId, number>>;
+  rewardMoney: number;
+  rewardBooks?: ContractRewardBook[];
+}
+
 export interface CampaignState {
   chapterId: ChapterId;
   completedUpgradeProjectIds: string[];
-  upgradeProjectProgress: Partial<Record<string, number>>;
+  upgradeProjectDeliveries: Partial<Record<string, Partial<Record<ResourceId, number>>>>;
+  upgradeProjectMoneyDelivered: Partial<Record<string, number>>;
   constructedBuildings: Partial<Record<BuildingId, boolean>>;
   unlockedSystems: Partial<Record<SystemId, boolean>>;
   clearingWood: number;
   clearingStone: number;
   clearingVegetables: number;
   campaignComplete: boolean;
+  seenStoryChapters: ChapterId[];
+  seenVictory: boolean;
+  activeContractIds: string[];
+  completedContractIds: string[];
 }
 
 export interface MarketResourceState {

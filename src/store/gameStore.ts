@@ -4,11 +4,14 @@ import { books, bookById, rarities, rarityLabels } from '../data/books';
 import { resources, resourceById, resourceIds } from '../data/resources';
 import {
   activateOfflineBoost as activateOfflineBoostInState,
+  abandonContract as abandonContractInState,
+  acceptContract as acceptContractInState,
   advanceChapter as advanceChapterInState,
   advanceWallClockState,
   assignWorkers as assignWorkersInState,
   buyBookPack as buyBookPackInState,
   buyResource as buyResourceInState,
+  completeContract as completeContractInState,
   constructBuilding as constructBuildingInState,
   contributeToUpgradeProject as contributeToUpgradeProjectInState,
   equipBook as equipBookInState,
@@ -18,12 +21,17 @@ import {
   getMarketPrices,
   hireWorker as hireWorkerInState,
   hydrateGameState,
+  markStorySeen as markStorySeenInState,
   prepareGameStateForSave,
   sellResource as sellResourceInState,
   setMarketAutomationRule as setMarketAutomationRuleInState,
   setRecipe as setRecipeInState,
+  setSecondaryRecipe as setSecondaryRecipeInState,
+  setWorkerShare as setWorkerShareInState,
   stopOfflineBoost as stopOfflineBoostInState,
   tickGame,
+  upgradeAllBooks as upgradeAllBooksInState,
+  upgradeAllPossibleBooks as upgradeAllPossibleBooksInState,
   upgradeBook as upgradeBookInState,
   upgradeBuilding as upgradeBuildingInState,
   upgradeHousing as upgradeHousingInState,
@@ -33,6 +41,7 @@ import type {
   BookId,
   BookRarity,
   BuildingId,
+  ChapterId,
   GameState,
   MarketPrice,
   MarketAutomationRule,
@@ -106,6 +115,8 @@ export interface GameStore extends GameState {
   tick: (deltaSeconds: number) => void;
   assignWorkers: (buildingId: BuildingId, workerCount: number) => void;
   setRecipe: (buildingId: BuildingId, recipeId: RecipeId) => void;
+  setSecondaryRecipe: (buildingId: BuildingId, recipeId: RecipeId | null) => void;
+  setWorkerShare: (buildingId: BuildingId, share: number) => void;
   buyResource: (resourceId: ResourceId, quantity: number) => void;
   sellResource: (resourceId: ResourceId, quantity: number) => void;
   setMarketAutomationRule: (
@@ -127,6 +138,12 @@ export interface GameStore extends GameState {
     slotIndex?: number,
   ) => void;
   upgradeBook: (bookId: BookId, rarity: BookRarity) => void;
+  upgradeAllBooks: (bookId: BookId) => void;
+  upgradeAllPossibleBooks: () => void;
+  markStorySeen: (segmentId: ChapterId | 'victory') => void;
+  acceptContract: (contractId: string) => void;
+  completeContract: (contractId: string) => void;
+  abandonContract: (contractId: string) => void;
   activateOfflineBoost: () => void;
   stopOfflineBoost: () => void;
   hireWorker: () => void;
@@ -169,6 +186,12 @@ export const useGameStore = create<GameStore>((set, get) => {
 
     setRecipe: (buildingId, recipeId) => {
       set((state) => withDerivedState(setRecipeInState(state, buildingId, recipeId)));
+    },
+    setSecondaryRecipe: (buildingId, recipeId) => {
+      set((state) => withDerivedState(setSecondaryRecipeInState(state, buildingId, recipeId)));
+    },
+    setWorkerShare: (buildingId, share) => {
+      set((state) => withDerivedState(setWorkerShareInState(state, buildingId, share)));
     },
 
     buyResource: (resourceId, quantity) => {
@@ -221,6 +244,30 @@ export const useGameStore = create<GameStore>((set, get) => {
 
     upgradeBook: (bookId, rarity) => {
       set((state) => withDerivedState(upgradeBookInState(state, bookId, rarity)));
+    },
+
+    upgradeAllBooks: (bookId) => {
+      set((state) => withDerivedState(upgradeAllBooksInState(state, bookId)));
+    },
+
+    upgradeAllPossibleBooks: () => {
+      set((state) => withDerivedState(upgradeAllPossibleBooksInState(state)));
+    },
+
+    markStorySeen: (segmentId) => {
+      set((state) => withDerivedState(markStorySeenInState(state, segmentId)));
+    },
+
+    acceptContract: (contractId) => {
+      set((state) => withDerivedState(acceptContractInState(state, contractId)));
+    },
+
+    completeContract: (contractId) => {
+      set((state) => withDerivedState(completeContractInState(state, contractId)));
+    },
+
+    abandonContract: (contractId) => {
+      set((state) => withDerivedState(abandonContractInState(state, contractId)));
     },
 
     activateOfflineBoost: () => {

@@ -124,6 +124,7 @@ export function BuildingPanel({ game, selectedBuildingId, selectedBuildingVersio
               <div className="worker-stepper" aria-label={`${definition.label} workers`}>
                 <button
                   type="button"
+                  aria-label={`Remove worker from ${definition.label}`}
                   onClick={() => game.assignWorkers(definition.id, building.workers - 1)}
                   disabled={building.workers <= 0}
                 >
@@ -132,6 +133,7 @@ export function BuildingPanel({ game, selectedBuildingId, selectedBuildingVersio
                 <strong>{building.workers}</strong>
                 <button
                   type="button"
+                  aria-label={`Add worker to ${definition.label}`}
                   onClick={() => game.assignWorkers(definition.id, building.workers + 1)}
                   disabled={availableWorkers <= 0}
                 >

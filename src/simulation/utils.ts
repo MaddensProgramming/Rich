@@ -126,6 +126,8 @@ export const cloneGameState = (state: GameState): GameState => ({
           level: Math.max(1, Math.trunc(asFiniteNumber(building.level, 1))),
           workers: Math.max(0, Math.trunc(asFiniteNumber(building.workers, 0))),
           recipeId: building.recipeId,
+          secondaryRecipeId: building.secondaryRecipeId ?? null,
+          workerShare: clamp(asFiniteNumber(building.workerShare, 0.5), 0.1, 0.9),
           equippedBooks: building.equippedBooks.map((book) => ({ ...book })),
         },
       ];
@@ -174,12 +176,25 @@ export const cloneGameState = (state: GameState): GameState => ({
   campaign: {
     chapterId: state.campaign.chapterId,
     completedUpgradeProjectIds: [...state.campaign.completedUpgradeProjectIds],
-    upgradeProjectProgress: Object.fromEntries(
-      Object.entries(state.campaign.upgradeProjectProgress).map(([projectId, progress]) => [
+    upgradeProjectDeliveries: Object.fromEntries(
+      Object.entries(state.campaign.upgradeProjectDeliveries).map(([projectId, deliveries]) => [
         projectId,
-        Math.max(0, asFiniteNumber(progress, 0)),
+        Object.fromEntries(
+          resourceIds
+            .map((resourceId) => [
+              resourceId,
+              Math.max(0, asFiniteNumber(deliveries?.[resourceId], 0)),
+            ])
+            .filter(([, amount]) => (amount as number) > 0),
+        ),
       ]),
-    ) as CampaignState['upgradeProjectProgress'],
+    ) as CampaignState['upgradeProjectDeliveries'],
+    upgradeProjectMoneyDelivered: Object.fromEntries(
+      Object.entries(state.campaign.upgradeProjectMoneyDelivered).map(([projectId, money]) => [
+        projectId,
+        Math.max(0, asFiniteNumber(money, 0)),
+      ]),
+    ) as CampaignState['upgradeProjectMoneyDelivered'],
     constructedBuildings: Object.fromEntries(
       buildingIds.map((buildingId) => [
         buildingId,
@@ -193,6 +208,10 @@ export const cloneGameState = (state: GameState): GameState => ({
     clearingStone: Math.max(0, asFiniteNumber(state.campaign.clearingStone, 0)),
     clearingVegetables: Math.max(0, asFiniteNumber(state.campaign.clearingVegetables, 0)),
     campaignComplete: Boolean(state.campaign.campaignComplete),
+    seenStoryChapters: [...state.campaign.seenStoryChapters],
+    seenVictory: Boolean(state.campaign.seenVictory),
+    activeContractIds: [...state.campaign.activeContractIds],
+    completedContractIds: [...state.campaign.completedContractIds],
   },
   offline: {
     chargeSeconds: Math.max(0, asFiniteNumber(state.offline.chargeSeconds, 0)),

@@ -96,6 +96,10 @@ const toSnapshot = (game: GameStore, selectedHotspotId: string | null, inputLock
       return [];
     }
 
+    if (placement.kind === 'contracts' && !game.campaign.unlockedSystems.contracts) {
+      return [];
+    }
+
     return {
       ...placement,
       detail:
@@ -107,7 +111,9 @@ const toSnapshot = (game: GameStore, selectedHotspotId: string | null, inputLock
               ? 'Housing and save controls'
               : placement.kind === 'project'
                 ? 'Chapter progress'
-                : 'Manual gathering',
+                : placement.kind === 'contracts'
+                  ? 'Town requests'
+                  : 'Manual gathering',
       blocked: false,
       selected: selectedHotspotId === placement.id,
     };

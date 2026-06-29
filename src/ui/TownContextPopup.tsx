@@ -10,12 +10,16 @@ import {
   getCurrentUpgradeProject,
   getCurrentUpgradeProjectProgress,
   getTownFoodConsumptionPerSecond,
+  getUpgradeProjectDeliveries,
+  getUpgradeProjectMoneyDelivered,
   isBuildingConstructed,
+  isSecondRecipeSlotUnlocked,
 } from '../simulation';
 import type { BuildingId, ResourceId, ResourceMap } from '../simulation';
 import type { GameStore } from '../store/gameStore';
 import { LibraryPanel } from './LibraryPanel';
 import { MarketPanel } from './MarketPanel';
+import { ContractsPanel } from './ContractsPanel';
 import { WorkerPanel } from './WorkerPanel';
 import { formatNumber, formatSignedRate } from './format';
 import type { TownHotspotSelection } from './townHotspots';
@@ -41,15 +45,35 @@ interface TownContextPopupProps {
 const readCampaignDisplay = (game: GameStore): CampaignDisplay => {
   const chapter = getCampaignChapter(game);
   const project = getCurrentUpgradeProject(game);
-  const progressValue = getCurrentUpgradeProjectProgress(game);
-  const progressTarget = project.targetProgress;
-  const progressRatio = progressTarget > 0 ? Math.min(1, progressValue / progressTarget) : null;
+  const progressRatio = getCurrentUpgradeProjectProgress(game);
+  const deliveries = getUpgradeProjectDeliveries(game, project.id);
+  const moneyDelivered = getUpgradeProjectMoneyDelivered(game, project.id);
+
+  const requirementKeys = Object.keys(project.requirements).filter(
+    (resourceId) => (project.requirements[resourceId as ResourceId] ?? 0) > 0,
+  );
+  let metLines = 0;
+  let totalLines = requirementKeys.length;
+  for (const resourceId of requirementKeys) {
+    const required = project.requirements[resourceId as ResourceId] ?? 0;
+    if ((deliveries[resourceId as ResourceId] ?? 0) + 1e-6 >= required) {
+      metLines += 1;
+    }
+  }
+  const moneyRequired = project.moneyRequirement ?? 0;
+  if (moneyRequired > 0) {
+    totalLines += 1;
+    if (moneyDelivered + 1e-6 >= moneyRequired) {
+      metLines += 1;
+    }
+  }
+
   const ready = canAdvanceChapter(game);
 
   return {
     chapterLabel: chapter.label,
     projectLabel: project.label,
-    progressLabel: `${formatNumber(progressValue, 0)} / ${formatNumber(progressTarget, 0)}`,
+    progressLabel: `${metLines} / ${totalLines} delivered`,
     progressRatio,
     statusLabel: game.campaign.campaignComplete
       ? 'Campaign complete'
@@ -57,7 +81,7 @@ const readCampaignDisplay = (game: GameStore): CampaignDisplay => {
         ? project.nextChapterId
           ? 'Ready to advance when you choose.'
           : 'Ready to complete.'
-        : 'Contribute resources to fill the current town project.',
+        : 'Deliver the exact resources required to fill the current town project.',
     unlockLabel: ready ? project.completionStoryText : project.description,
   };
 };
@@ -162,6 +186,7 @@ function BuildingPopup({ game, selection }: { game: GameStore; selection: TownHo
           <div className="worker-stepper popup-stepper" aria-label={`${displayLabel} workers`}>
             <button
               type="button"
+              aria-label={`Remove worker from ${displayLabel}`}
               onClick={() => game.assignWorkers(definition.id, building.workers - 1)}
               disabled={building.workers <= 0}
             >
@@ -170,6 +195,7 @@ function BuildingPopup({ game, selection }: { game: GameStore; selection: TownHo
             <strong>{building.workers}</strong>
             <button
               type="button"
+              aria-label={`Add worker to ${displayLabel}`}
               onClick={() => game.assignWorkers(definition.id, building.workers + 1)}
               disabled={availableWorkers <= 0}
             >
@@ -200,6 +226,53 @@ function BuildingPopup({ game, selection }: { game: GameStore; selection: TownHo
       ) : (
         <div className="single-recipe popup-single-recipe">{recipe.label}</div>
       )}
+
+      {isSecondRecipeSlotUnlocked(game, definition.id) ? (
+        <div className="second-recipe-slot">
+          <label className="field-label popup-field">
+            Second recipe
+            <select
+              value={building.secondaryRecipeId ?? ''}
+              onChange={(event) =>
+                game.setSecondaryRecipe(
+                  definition.id,
+                  event.currentTarget.value === ''
+                    ? null
+                    : (event.currentTarget.value as typeof building.recipeId),
+                )
+              }
+            >
+              <option value="">None</option>
+              {availableRecipes
+                .filter((recipeId) => recipeId !== building.recipeId)
+                .map((recipeId) => (
+                  <option key={recipeId} value={recipeId}>
+                    {game.definitions.recipeById[recipeId].label}
+                  </option>
+                ))}
+            </select>
+          </label>
+          {building.secondaryRecipeId ? (
+            <label className="field-label popup-field worker-share-field">
+              <span>
+                Worker split: {Math.round(building.workerShare * 100)}% {recipe.label} /{' '}
+                {Math.round((1 - building.workerShare) * 100)}%{' '}
+                {game.definitions.recipeById[building.secondaryRecipeId].label}
+              </span>
+              <input
+                type="range"
+                min={10}
+                max={90}
+                step={5}
+                value={Math.round(building.workerShare * 100)}
+                onChange={(event) =>
+                  game.setWorkerShare(definition.id, Number(event.currentTarget.value) / 100)
+                }
+              />
+            </label>
+          ) : null}
+        </div>
+      ) : null}
 
       <div className="building-flows popup-flows">
         <div>
@@ -268,14 +341,18 @@ function ProjectPopup({ game, onOpenHotspot }: Pick<TownContextPopupProps, 'game
   const chapter = getCampaignChapter(game);
   const project = getCurrentUpgradeProject(game);
   const ready = canAdvanceChapter(game);
-  const contributionRows = Object.entries(project.resourceContributions)
+  const deliveries = getUpgradeProjectDeliveries(game, project.id);
+  const moneyDelivered = getUpgradeProjectMoneyDelivered(game, project.id);
+  const requirementRows = Object.entries(project.requirements)
     .filter((entry): entry is [ResourceId, number] => (entry[1] ?? 0) > 0)
-    .map(([resourceId, rate]) => ({
+    .map(([resourceId, required]) => ({
       resourceId,
-      rate,
+      required,
+      delivered: deliveries[resourceId] ?? 0,
       owned: game.resources[resourceId],
       definition: game.definitions.resourceById[resourceId],
     }));
+  const moneyRequired = project.moneyRequirement ?? 0;
   const availableBuildings = chapter.availableBuildingIds;
 
   return (
@@ -289,7 +366,7 @@ function ProjectPopup({ game, onOpenHotspot }: Pick<TownContextPopupProps, 'game
 
       <div className="popup-progress">
         <div className="boost-topline">
-          <span>Project progress</span>
+          <span>Requirements met</span>
           <strong>{campaign.progressLabel}</strong>
         </div>
         <div className="boost-bar popup-progress-bar" aria-label="Chapter progress">
@@ -299,62 +376,91 @@ function ProjectPopup({ game, onOpenHotspot }: Pick<TownContextPopupProps, 'game
       </div>
 
       <div className="project-contribution-grid">
-        {contributionRows.map(({ resourceId, rate, owned, definition }) => (
-          <div className="project-contribution-row" key={resourceId}>
-            <div>
-              <strong>
-                <span className="resource-icon" aria-hidden="true">
-                  {definition.icon}
+        {requirementRows.map(({ resourceId, required, delivered, owned, definition }) => {
+          const remaining = Math.max(0, required - delivered);
+          const complete = remaining <= 1e-6;
+          return (
+            <div className="project-contribution-row" key={resourceId}>
+              <div>
+                <strong>
+                  <span className="resource-icon" aria-hidden="true">
+                    {definition.icon}
+                  </span>
+                  {definition.label}
+                </strong>
+                <span>
+                  {formatNumber(delivered, 0)} / {formatNumber(required, 0)} delivered ·{' '}
+                  {formatNumber(owned, 0)} owned
                 </span>
-                {definition.label}
-              </strong>
-              <span>
-                {formatNumber(owned, 0)} owned · {formatNumber(rate, 1)} progress each
-              </span>
-            </div>
-            <div className="project-contribution-actions">
-              {[5, 25].map((amount) => (
+              </div>
+              <div className="project-contribution-actions">
+                {[5, 25].map((amount) => (
+                  <button
+                    key={amount}
+                    type="button"
+                    onClick={() =>
+                      game.contributeToUpgradeProject({
+                        [resourceId]: Math.min(amount, remaining),
+                      })
+                    }
+                    disabled={owned <= 0 || complete}
+                  >
+                    +{amount}
+                  </button>
+                ))}
                 <button
-                  key={amount}
                   type="button"
-                  onClick={() => game.contributeToUpgradeProject({ [resourceId]: amount })}
-                  disabled={owned <= 0 || campaign.progressRatio === 1}
+                  onClick={() => game.contributeToUpgradeProject({ [resourceId]: remaining })}
+                  disabled={owned <= 0 || complete}
                 >
-                  +{amount}
+                  Max
                 </button>
-              ))}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
-      {project.moneyContributionRate ? (
-        <div className="project-contribution-row">
-          <div>
-            <strong>Money</strong>
-            <span>
-              ${formatNumber(game.money, 0)} available · {formatNumber(project.moneyContributionRate, 2)} progress each
-            </span>
-          </div>
-          <div className="project-contribution-actions">
-            {[50, 250].map((amount) => (
-              <button
-                key={amount}
-                type="button"
-                onClick={() => game.contributeToUpgradeProject({}, amount)}
-                disabled={game.money <= 0 || campaign.progressRatio === 1}
-              >
-                +${amount}
-              </button>
-            ))}
-          </div>
-        </div>
+      {moneyRequired > 0 ? (
+        (() => {
+          const remainingMoney = Math.max(0, moneyRequired - moneyDelivered);
+          const moneyComplete = remainingMoney <= 1e-6;
+          return (
+            <div className="project-contribution-row">
+              <div>
+                <strong>Money</strong>
+                <span>
+                  ${formatNumber(moneyDelivered, 0)} / ${formatNumber(moneyRequired, 0)} delivered · $
+                  {formatNumber(game.money, 0)} available
+                </span>
+              </div>
+              <div className="project-contribution-actions">
+                {[50, 250].map((amount) => (
+                  <button
+                    key={amount}
+                    type="button"
+                    onClick={() =>
+                      game.contributeToUpgradeProject({}, Math.min(amount, remainingMoney))
+                    }
+                    disabled={game.money <= 0 || moneyComplete}
+                  >
+                    +${amount}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => game.contributeToUpgradeProject({}, remainingMoney)}
+                  disabled={game.money <= 0 || moneyComplete}
+                >
+                  Max
+                </button>
+              </div>
+            </div>
+          );
+        })()
       ) : null}
 
       <div className="popup-action-grid">
-        <button type="button" onClick={game.advanceChapter} disabled={!ready || game.campaign.campaignComplete}>
-          {project.nextChapterId ? 'Advance Chapter' : 'Complete Project'}
-        </button>
         {availableBuildings.map((buildingId) => (
           <button
             key={buildingId}
@@ -371,6 +477,17 @@ function ProjectPopup({ game, onOpenHotspot }: Pick<TownContextPopupProps, 'game
             Open {getStageBuildingLabel(game, buildingId)}
           </button>
         ))}
+      </div>
+
+      <div className="popup-primary-action">
+        <button
+          type="button"
+          className="popup-advance-button"
+          onClick={game.advanceChapter}
+          disabled={!ready || game.campaign.campaignComplete}
+        >
+          {project.nextChapterId ? 'Advance Chapter' : 'Complete Project'}
+        </button>
       </div>
     </section>
   );
@@ -520,6 +637,14 @@ export function TownContextPopup({
 
     if (selection.kind === 'town') {
       return <WorkerPanel game={game} />;
+    }
+
+    if (selection.kind === 'contracts') {
+      if (!game.campaign.unlockedSystems.contracts) {
+        return <div className="empty-state">Town requests open in Village.</div>;
+      }
+
+      return <ContractsPanel game={game} />;
     }
 
     if (selection.kind === 'project') {

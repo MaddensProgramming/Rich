@@ -216,6 +216,34 @@ export const canUpgradeBook = (state: GameState, bookId: BookId, rarity: BookRar
   );
 };
 
+export const upgradeAllBooks = (state: GameState, bookId: BookId): GameState => {
+  if (!state.campaign.unlockedSystems.library) {
+    return state;
+  }
+
+  let next = state;
+  for (const rarity of rarities) {
+    while (canUpgradeBook(next, bookId, rarity)) {
+      next = upgradeBook(next, bookId, rarity);
+    }
+  }
+
+  return next;
+};
+
+export const upgradeAllPossibleBooks = (state: GameState): GameState => {
+  if (!state.campaign.unlockedSystems.library) {
+    return state;
+  }
+
+  let next = state;
+  for (const book of books) {
+    next = upgradeAllBooks(next, book.id);
+  }
+
+  return next;
+};
+
 export const getBuildingBookEffects = (state: GameState, buildingId: BuildingId): BuildingBookEffects => {
   const totals: BuildingBookEffects = {
     outputMultiplierBonus: {},

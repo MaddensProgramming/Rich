@@ -76,6 +76,27 @@ export const recipes: RecipeDefinition[] = [
     inputs: { wood: 3 },
     outputs: { bows: 0.9 },
   },
+  {
+    id: 'lumberjack_planks',
+    buildingId: 'lumberjack',
+    label: 'Saw Planks',
+    inputs: { wood: 3 },
+    outputs: { planks: 0.9 },
+  },
+  {
+    id: 'blacksmith_tools',
+    buildingId: 'blacksmith',
+    label: 'Forge Tools',
+    inputs: { iron_bars: 1, planks: 1 },
+    outputs: { tools: 0.8 },
+  },
+  {
+    id: 'stonemason_blocks',
+    buildingId: 'stonemason',
+    label: 'Cut Stone Blocks',
+    inputs: { stone: 4, tools: 1 },
+    outputs: { stone_blocks: 0.7 },
+  },
 ];
 
 export const recipeById = Object.fromEntries(
@@ -101,8 +122,8 @@ export const buildings: BuildingDefinition[] = [
   {
     id: 'lumberjack',
     label: 'Lumberjack',
-    description: 'Cuts timber for buildings, tools, and bows.',
-    recipes: ['lumberjack_wood'],
+    description: 'Cuts timber for buildings, tools, and bows. Can also saw planks in Mountain Town.',
+    recipes: ['lumberjack_wood', 'lumberjack_planks'],
     baseProductionMultiplier: 0.66,
     constructionCost: { wood: 14, stone: 8 },
     availableInChapters: ['arrival', 'hamlet', 'village', 'mountain_town'],
@@ -161,8 +182,8 @@ export const buildings: BuildingDefinition[] = [
   {
     id: 'blacksmith',
     label: 'Blacksmith',
-    description: 'Makes swords from iron bars or bows from wood.',
-    recipes: ['blacksmith_swords', 'blacksmith_bows'],
+    description: 'Makes swords from iron bars, bows from wood, or tools from iron and planks.',
+    recipes: ['blacksmith_swords', 'blacksmith_bows', 'blacksmith_tools'],
     baseProductionMultiplier: 0.36,
     constructionCost: { wood: 20, stone: 16, iron_bars: 3 },
     availableInChapters: ['village', 'mountain_town'],
@@ -171,6 +192,21 @@ export const buildings: BuildingDefinition[] = [
       3: { wood: 44, coal: 22, iron_bars: 9 },
       4: { stone: 70, coal: 45, iron_bars: 20 },
       5: { coal: 95, iron_bars: 45, swords: 8, bows: 12 },
+    },
+  },
+  {
+    id: 'stonemason',
+    label: 'Stonemason',
+    description: 'Dresses quarried stone and tools into heavy blocks for the Great Hall.',
+    recipes: ['stonemason_blocks'],
+    baseProductionMultiplier: 0.42,
+    constructionCost: { stone: 40, wood: 20, iron_bars: 8 },
+    availableInChapters: ['mountain_town'],
+    upgradeCosts: {
+      2: { stone: 40, wood: 20, iron_bars: 8 },
+      3: { stone: 80, iron_bars: 18, tools: 6 },
+      4: { stone: 150, coal: 60, tools: 16 },
+      5: { stone: 260, iron_bars: 60, tools: 36, swords: 6 },
     },
   },
 ];

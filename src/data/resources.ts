@@ -10,6 +10,9 @@ export const resources: ResourceDefinition[] = [
   { id: 'iron_bars', label: 'Iron Bars', icon: 'I', basePrice: 12.5, marketDepth: 78, category: 'processed' },
   { id: 'bows', label: 'Bows', icon: 'B', basePrice: 18.5, marketDepth: 58, category: 'processed' },
   { id: 'swords', label: 'Swords', icon: 'X', basePrice: 29, marketDepth: 48, category: 'processed' },
+  { id: 'planks', label: 'Planks', icon: 'P', basePrice: 10, marketDepth: 70, category: 'processed' },
+  { id: 'tools', label: 'Tools', icon: 'T', basePrice: 34, marketDepth: 42, category: 'processed' },
+  { id: 'stone_blocks', label: 'Stone Blocks', icon: 'K', basePrice: 46, marketDepth: 36, category: 'processed' },
 ];
 
 export const resourceIds = resources.map((resource) => resource.id) as ResourceId[];
