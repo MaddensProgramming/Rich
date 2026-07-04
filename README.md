@@ -24,7 +24,7 @@ GitHub Pages must be enabled in the repository settings with **Source** set to *
 - Upgrade projects use strict per-resource requirements: each project lists the exact amounts of resources (and sometimes money) that must be delivered. Deliveries are clamped so the player can never over-deliver, and the project advances only when every line is fully met.
 - Filling a project does not auto-advance the chapter. The player chooses when to advance.
 - Hamlet, Village, Mountain Town, and the Great Hall project are defined in data for the campaign path.
-- Requirements are tuned with the worker-second effort model in `src/simulation/balance.ts`, which keeps every requirement line meaningful (between 8% and 60% of a project's total effort), keeps total effort rising each chapter, and reports strong or weak recipe value production per worker.
+- Requirements are tuned with the worker-second effort model in `src/simulation/balance.ts`, which keeps every requirement line meaningful (between 8% and 60% of a project's total effort), keeps total effort rising each chapter, and reports strong or weak recipe and book value production.
 - Campaign state is owned by the simulation layer and saved with the rest of the game.
 
 ### Manual Gathering And Construction
@@ -159,7 +159,7 @@ Vitest covers the current campaign and economy behavior:
 - Library upgrade-all and upgrade-all-possible promote duplicates correctly.
 - Contracts unlock by chapter, show up to two offers at a time, consume goods, and grant money and book rewards.
 - Contract balance checks keep the finite queue at 10 requests and prevent money rewards from falling below market sell value unless book rewards offset part of the value.
-- The balance model keeps every project requirement line between 8% and 60% of total effort, with total effort rising each chapter, and includes a per-recipe value production diagnostic.
+- The balance model keeps every project requirement line between 8% and 60% of total effort, with total effort rising each chapter, and includes per-recipe and book value production diagnostics.
 
 Current test command:
 

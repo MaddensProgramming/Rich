@@ -6,6 +6,7 @@ import {
   MIN_CONTRACT_REWARD_TO_SELL_VALUE,
   MIN_CONTRACT_REWARD_TO_SELL_VALUE_WITH_BOOKS,
   MIN_SHARE,
+  getAllBookValueProductionReports,
   getAllContractEconomyReports,
   getAllProjectBalanceReports,
   getAllRecipeValueProductionReports,
@@ -85,6 +86,40 @@ describe('recipe value production balance', () => {
         `${report.recipeId} value per worker-second`,
       ).toBe(true);
       expect(Number.isFinite(report.relativeToMedian), `${report.recipeId} relative value`).toBe(true);
+    }
+  });
+});
+
+describe('book value production balance', () => {
+  it('reports each common book by reference value production', () => {
+    const reports = getAllBookValueProductionReports('common');
+
+    expect(reports.map((report) => report.bookId)).toEqual([
+      'deep_veins',
+      'coal_seams',
+      'stone_surveying',
+      'mine_cart_rails',
+      'sharp_axes',
+      'forest_paths',
+      'crop_rotation',
+      'efficient_harvesting',
+      'preservation_methods',
+      'efficient_kitchens',
+      'hearty_recipes',
+      'hotter_furnaces',
+      'coal_efficiency',
+      'refining_techniques',
+      'swordsmith_manual',
+      'bowyer_techniques',
+      'weapon_contracts',
+    ]);
+
+    for (const report of reports) {
+      expect(
+        Number.isFinite(report.valuePerSecondBonus),
+        `${report.bookId} value per second bonus`,
+      ).toBe(true);
+      expect(Number.isFinite(report.relativeToMedian), `${report.bookId} relative value`).toBe(true);
     }
   });
 });

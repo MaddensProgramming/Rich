@@ -1,8 +1,13 @@
 import { buildingById, recipes } from '../data/buildings';
+import { books, rarityStrength } from '../data/books';
 import { resourceById, resourceIds } from '../data/resources';
 import { chapterUpgradeProjects } from '../data/chapterProjects';
 import { contracts } from '../data/contracts';
+import { FOOD_CONSUMPTION_PER_WORKER } from './gameState';
 import type {
+  BookDefinition,
+  BookId,
+  BookRarity,
   BuildingId,
   ChapterUpgradeProjectDefinition,
   ContractDefinition,
@@ -266,6 +271,181 @@ export const getAllRecipeValueProductionReports = (): RecipeValueProductionRepor
       ...report,
       relativeToMedian,
       rating: getRecipeValueRating(relativeToMedian),
+    };
+  });
+};
+
+export const BOOK_VALUE_REFERENCE_BUILDING_WORKERS = 5;
+export const BOOK_VALUE_REFERENCE_TOWN_WORKERS = 10;
+export const WEAK_BOOK_VALUE_RATIO = 0.85;
+export const STRONG_BOOK_VALUE_RATIO = 1.15;
+
+export type BookValueRating = 'weak' | 'balanced' | 'strong' | 'utility';
+
+export interface BookRecipeValueLine {
+  recipeId: RecipeId;
+  label: string;
+  valuePerSecondBonus: number;
+}
+
+export interface BookValueProductionReport {
+  bookId: BookId;
+  label: string;
+  buildingId: BuildingId;
+  rarity: BookRarity;
+  effectType: BookDefinition['effect']['type'];
+  valuePerSecondBonus: number;
+  relativeToMedian: number;
+  rating: BookValueRating;
+  recipes: BookRecipeValueLine[];
+}
+
+const getBookValueRating = (
+  report: Omit<BookValueProductionReport, 'relativeToMedian' | 'rating'>,
+  relativeToMedian: number,
+): BookValueRating => {
+  if (report.effectType === 'marketImpactMultiplier') {
+    return 'utility';
+  }
+
+  if (relativeToMedian <= WEAK_BOOK_VALUE_RATIO) {
+    return 'weak';
+  }
+
+  if (relativeToMedian >= STRONG_BOOK_VALUE_RATIO) {
+    return 'strong';
+  }
+
+  return 'balanced';
+};
+
+const getBookRecipeValueBonus = (
+  book: BookDefinition,
+  rarity: BookRarity,
+  recipe: RecipeDefinition,
+): BookRecipeValueLine => {
+  const building = buildingById[recipe.buildingId];
+  const power = rarityStrength[rarity];
+  const effect = book.effect;
+  const effectiveWorkers = BOOK_VALUE_REFERENCE_BUILDING_WORKERS ** 0.85;
+  let valuePerRunBonus = 0;
+  let valuePerSecondBonus = 0;
+
+  if (effect.type === 'outputMultiplier') {
+    valuePerRunBonus =
+      (recipe.outputs[effect.resourceId] ?? 0) *
+      resourceById[effect.resourceId].basePrice *
+      effect.value *
+      power;
+    valuePerSecondBonus = valuePerRunBonus * building.baseProductionMultiplier * effectiveWorkers;
+  }
+
+  if (effect.type === 'inputMultiplier') {
+    valuePerRunBonus =
+      (recipe.inputs[effect.resourceId] ?? 0) *
+      resourceById[effect.resourceId].basePrice *
+      -effect.value *
+      power;
+    valuePerSecondBonus = valuePerRunBonus * building.baseProductionMultiplier * effectiveWorkers;
+  }
+
+  if (effect.type === 'efficiencyExponent') {
+    const baseExponent = 0.85;
+    const boostedExponent = Math.min(0.97, Math.max(0.65, baseExponent + effect.value * power));
+    const grossValue = resourceIds.reduce(
+      (sum, resourceId) =>
+        sum + getResourceMarketValue(resourceId, recipe.outputs[resourceId] ?? 0),
+      0,
+    );
+    const inputValue = resourceIds.reduce(
+      (sum, resourceId) =>
+        sum + getResourceMarketValue(resourceId, recipe.inputs[resourceId] ?? 0),
+      0,
+    );
+    const extraRuns =
+      BOOK_VALUE_REFERENCE_BUILDING_WORKERS ** boostedExponent -
+      BOOK_VALUE_REFERENCE_BUILDING_WORKERS ** baseExponent;
+
+    valuePerSecondBonus = (grossValue - inputValue) * building.baseProductionMultiplier * extraRuns;
+  }
+
+  return {
+    recipeId: recipe.id,
+    label: recipe.label,
+    valuePerSecondBonus,
+  };
+};
+
+const getBookValueProductionBaseReport = (
+  book: BookDefinition,
+  rarity: BookRarity,
+): Omit<BookValueProductionReport, 'relativeToMedian' | 'rating'> => {
+  const effect = book.effect;
+
+  if (effect.type === 'foodConsumptionMultiplier') {
+    return {
+      bookId: book.id,
+      label: book.label,
+      buildingId: book.buildingId,
+      rarity,
+      effectType: effect.type,
+      valuePerSecondBonus:
+        BOOK_VALUE_REFERENCE_TOWN_WORKERS *
+        FOOD_CONSUMPTION_PER_WORKER *
+        resourceById.food.basePrice *
+        -effect.value *
+        rarityStrength[rarity],
+      recipes: [],
+    };
+  }
+
+  if (effect.type === 'marketImpactMultiplier') {
+    return {
+      bookId: book.id,
+      label: book.label,
+      buildingId: book.buildingId,
+      rarity,
+      effectType: effect.type,
+      valuePerSecondBonus: 0,
+      recipes: [],
+    };
+  }
+
+  const recipeLines = recipes
+    .filter((recipe) => recipe.buildingId === book.buildingId)
+    .map((recipe) => getBookRecipeValueBonus(book, rarity, recipe));
+  const bestLine = recipeLines.reduce((best, line) =>
+    line.valuePerSecondBonus > best.valuePerSecondBonus ? line : best,
+  );
+
+  return {
+    bookId: book.id,
+    label: book.label,
+    buildingId: book.buildingId,
+    rarity,
+    effectType: effect.type,
+    valuePerSecondBonus: bestLine.valuePerSecondBonus,
+    recipes: recipeLines,
+  };
+};
+
+export const getAllBookValueProductionReports = (
+  rarity: BookRarity = 'common',
+): BookValueProductionReport[] => {
+  const baseReports = books.map((book) => getBookValueProductionBaseReport(book, rarity));
+  const median = getMedian(
+    baseReports
+      .filter((report) => report.effectType !== 'marketImpactMultiplier')
+      .map((report) => report.valuePerSecondBonus),
+  );
+
+  return baseReports.map((report) => {
+    const relativeToMedian = median > 0 ? report.valuePerSecondBonus / median : 0;
+
+    return {
+      ...report,
+      relativeToMedian,
+      rating: getBookValueRating(report, relativeToMedian),
     };
   });
 };
