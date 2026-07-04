@@ -1,4 +1,4 @@
-import { buildingById, buildings, recipeById, recipes } from '../data/buildings';
+import { buildingById, recipes } from '../data/buildings';
 import { resourceById, resourceIds } from '../data/resources';
 import { chapterUpgradeProjects } from '../data/chapterProjects';
 import { contracts } from '../data/contracts';
@@ -185,28 +185,22 @@ export const getProjectBalanceReport = (
 export const getAllProjectBalanceReports = (): ProjectBalanceReport[] =>
   chapterUpgradeProjects.map((project) => getProjectBalanceReport(project));
 
-export const WEAK_BUILDING_VALUE_RATIO = 0.85;
-export const STRONG_BUILDING_VALUE_RATIO = 1.15;
+export const WEAK_RECIPE_VALUE_RATIO = 0.85;
+export const STRONG_RECIPE_VALUE_RATIO = 1.15;
 
-export type BuildingValueRating = 'weak' | 'balanced' | 'strong';
+export type RecipeValueRating = 'weak' | 'balanced' | 'strong';
 
-export interface RecipeValueProductionLine {
+export interface RecipeValueProductionReport {
   recipeId: RecipeId;
   label: string;
+  buildingId: BuildingId;
+  buildingLabel: string;
   grossValuePerRun: number;
   inputValuePerRun: number;
   netValuePerRun: number;
   valuePerWorkerSecond: number;
-}
-
-export interface BuildingValueProductionReport {
-  buildingId: BuildingId;
-  label: string;
-  bestRecipeId: RecipeId;
-  valuePerWorkerSecond: number;
   relativeToMedian: number;
-  rating: BuildingValueRating;
-  recipes: RecipeValueProductionLine[];
+  rating: RecipeValueRating;
 }
 
 const getResourceMarketValue = (resourceId: ResourceId, amount = 0): number =>
@@ -214,7 +208,7 @@ const getResourceMarketValue = (resourceId: ResourceId, amount = 0): number =>
 
 export const getRecipeValueProductionLine = (
   recipe: RecipeDefinition,
-): RecipeValueProductionLine => {
+): Omit<RecipeValueProductionReport, 'relativeToMedian' | 'rating'> => {
   const building = buildingById[recipe.buildingId];
   let grossValuePerRun = 0;
   let inputValuePerRun = 0;
@@ -229,6 +223,8 @@ export const getRecipeValueProductionLine = (
   return {
     recipeId: recipe.id,
     label: recipe.label,
+    buildingId: recipe.buildingId,
+    buildingLabel: building.label,
     grossValuePerRun,
     inputValuePerRun,
     netValuePerRun,
@@ -247,36 +243,20 @@ const getMedian = (values: number[]): number => {
   return sorted.length % 2 === 0 ? (sorted[middle - 1] + sorted[middle]) / 2 : sorted[middle];
 };
 
-const getBuildingValueRating = (relativeToMedian: number): BuildingValueRating => {
-  if (relativeToMedian <= WEAK_BUILDING_VALUE_RATIO) {
+const getRecipeValueRating = (relativeToMedian: number): RecipeValueRating => {
+  if (relativeToMedian <= WEAK_RECIPE_VALUE_RATIO) {
     return 'weak';
   }
 
-  if (relativeToMedian >= STRONG_BUILDING_VALUE_RATIO) {
+  if (relativeToMedian >= STRONG_RECIPE_VALUE_RATIO) {
     return 'strong';
   }
 
   return 'balanced';
 };
 
-export const getAllBuildingValueProductionReports = (): BuildingValueProductionReport[] => {
-  const baseReports = buildings.map((building) => {
-    const recipeLines = building.recipes.map((recipeId) =>
-      getRecipeValueProductionLine(recipeById[recipeId]),
-    );
-    const bestRecipe = recipeLines.reduce((best, recipe) =>
-      recipe.valuePerWorkerSecond > best.valuePerWorkerSecond ? recipe : best,
-    );
-
-    return {
-      buildingId: building.id,
-      label: building.label,
-      bestRecipeId: bestRecipe.recipeId,
-      valuePerWorkerSecond: bestRecipe.valuePerWorkerSecond,
-      recipes: recipeLines,
-    };
-  });
-
+export const getAllRecipeValueProductionReports = (): RecipeValueProductionReport[] => {
+  const baseReports = recipes.map((recipe) => getRecipeValueProductionLine(recipe));
   const median = getMedian(baseReports.map((report) => report.valuePerWorkerSecond));
 
   return baseReports.map((report) => {
@@ -285,7 +265,7 @@ export const getAllBuildingValueProductionReports = (): BuildingValueProductionR
     return {
       ...report,
       relativeToMedian,
-      rating: getBuildingValueRating(relativeToMedian),
+      rating: getRecipeValueRating(relativeToMedian),
     };
   });
 };

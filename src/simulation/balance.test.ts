@@ -7,8 +7,8 @@ import {
   MIN_CONTRACT_REWARD_TO_SELL_VALUE_WITH_BOOKS,
   MIN_SHARE,
   getAllContractEconomyReports,
-  getAllBuildingValueProductionReports,
   getAllProjectBalanceReports,
+  getAllRecipeValueProductionReports,
   getProjectEffort,
 } from './balance';
 
@@ -59,27 +59,32 @@ describe('contract balance', () => {
   });
 });
 
-describe('building value production balance', () => {
-  it('reports each building by best villager value production', () => {
-    const reports = getAllBuildingValueProductionReports();
+describe('recipe value production balance', () => {
+  it('reports each recipe by villager value production', () => {
+    const reports = getAllRecipeValueProductionReports();
 
-    expect(reports.map((report) => report.buildingId)).toEqual([
-      'mine',
-      'lumberjack',
-      'farm',
-      'food_maker',
-      'smelter',
-      'blacksmith',
-      'stonemason',
+    expect(reports.map((report) => report.recipeId)).toEqual([
+      'mine_coal_focus',
+      'mine_iron_focus',
+      'mine_stone_focus',
+      'mine_balanced',
+      'lumberjack_wood',
+      'farm_vegetables',
+      'food_maker_basic_food',
+      'smelter_iron_bars',
+      'blacksmith_swords',
+      'blacksmith_bows',
+      'lumberjack_planks',
+      'blacksmith_tools',
+      'stonemason_blocks',
     ]);
 
     for (const report of reports) {
-      expect(report.recipes.length, `${report.buildingId} recipes`).toBeGreaterThan(0);
       expect(
         Number.isFinite(report.valuePerWorkerSecond),
-        `${report.buildingId} value per worker-second`,
+        `${report.recipeId} value per worker-second`,
       ).toBe(true);
-      expect(Number.isFinite(report.relativeToMedian), `${report.buildingId} relative value`).toBe(true);
+      expect(Number.isFinite(report.relativeToMedian), `${report.recipeId} relative value`).toBe(true);
     }
   });
 });

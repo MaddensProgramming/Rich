@@ -77,7 +77,7 @@ export const contracts: ContractDefinition[] = [
     description: 'Master masons will buy dressed stone to train the next crew.',
     minChapterId: 'mountain_town',
     requiredResources: { stone_blocks: 45, tools: 30 },
-    rewardMoney: 3200,
+    rewardMoney: 3900,
     rewardBooks: [{ bookId: 'stone_surveying', rarity: 'rare', count: 1 }],
   },
   {
