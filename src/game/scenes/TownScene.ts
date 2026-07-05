@@ -1,9 +1,12 @@
 import Phaser from 'phaser';
 import arrivalBackdropUrl from '../../assets/town/arrival-backdrop.png';
+import berriesGatheringUrl from '../../assets/gathering/berries.png';
 import hamletBackdropUrl from '../../assets/town/hamlet-backdrop.png';
 import mountainTownBackdropUrl from '../../assets/town/mountain-town-generated-backdrop.png';
+import stoneGatheringUrl from '../../assets/gathering/stone.png';
 import villageBackdropUrl from '../../assets/town/village-backdrop.png';
-import type { BuildingId } from '../../simulation';
+import woodGatheringUrl from '../../assets/gathering/wood.png';
+import type { BuildingId, ResourceId } from '../../simulation';
 import type { TownHotspotId, TownHotspotSelection, TownHotspotSnapshot } from '../../ui/townHotspots';
 
 interface TownBuildingSnapshot {
@@ -23,6 +26,19 @@ export interface TownSnapshot {
   selectedHotspotId: string | null;
   buildings: TownBuildingSnapshot[];
   hotspots: TownHotspotSnapshot[];
+  gatherables: TownGatherableSnapshot[];
+}
+
+export interface TownGatherableSnapshot {
+  id: string;
+  resourceId: Extract<ResourceId, 'wood' | 'stone' | 'vegetables'>;
+  label: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  clicksRemaining: number;
+  poolRemaining: number;
 }
 
 interface HotspotVisual {
@@ -36,6 +52,15 @@ interface HotspotVisual {
   hotspot: TownHotspotSnapshot;
 }
 
+interface GatherableVisual {
+  container: Phaser.GameObjects.Container;
+  image: Phaser.GameObjects.Image;
+  hitArea: Phaser.GameObjects.Ellipse;
+  shadow: Phaser.GameObjects.Ellipse;
+  badge: Phaser.GameObjects.Text;
+  gatherable: TownGatherableSnapshot;
+}
+
 const TOWN_BACKDROP_BY_STAGE: Record<string, { key: string; url: string }> = {
   arrival: { key: 'town-backdrop-arrival', url: arrivalBackdropUrl },
   hamlet: { key: 'town-backdrop-hamlet', url: hamletBackdropUrl },
@@ -44,12 +69,18 @@ const TOWN_BACKDROP_BY_STAGE: Record<string, { key: string; url: string }> = {
 };
 
 const DEFAULT_TOWN_BACKDROP_KEY = TOWN_BACKDROP_BY_STAGE.arrival.key;
+const GATHERING_ASSETS: Record<TownGatherableSnapshot['resourceId'], { key: string; url: string }> = {
+  wood: { key: 'gathering-wood', url: woodGatheringUrl },
+  stone: { key: 'gathering-stone', url: stoneGatheringUrl },
+  vegetables: { key: 'gathering-berries', url: berriesGatheringUrl },
+};
 
 export class TownScene extends Phaser.Scene {
   private backdrop?: Phaser.GameObjects.Image;
   private currentBackdropKey = DEFAULT_TOWN_BACKDROP_KEY;
   private inputLocked = false;
   private visuals = new Map<TownHotspotId, HotspotVisual>();
+  private gatherableVisuals = new Map<string, GatherableVisual>();
   private smoke: Phaser.GameObjects.Arc[] = [];
 
   constructor() {
@@ -59,6 +90,10 @@ export class TownScene extends Phaser.Scene {
   preload() {
     for (const backdrop of Object.values(TOWN_BACKDROP_BY_STAGE)) {
       this.load.image(backdrop.key, backdrop.url);
+    }
+
+    for (const asset of Object.values(GATHERING_ASSETS)) {
+      this.load.image(asset.key, asset.url);
     }
   }
 
@@ -141,7 +176,38 @@ export class TownScene extends Phaser.Scene {
       visual.body.setFillStyle(selected ? 0x2a453e : hotspot.blocked ? 0x6b4a28 : 0x17211f, hotspot.blocked ? 0.74 : 0.68);
     }
 
+    this.updateGatherables(snapshot.gatherables);
     this.layoutTown();
+  }
+
+  private updateGatherables(gatherables: TownGatherableSnapshot[]) {
+    const gatherableIds = new Set(gatherables.map((gatherable) => gatherable.id));
+
+    for (const [id, visual] of this.gatherableVisuals) {
+      if (!gatherableIds.has(id)) {
+        visual.container.destroy(true);
+        this.gatherableVisuals.delete(id);
+      }
+    }
+
+    for (const gatherable of gatherables) {
+      const visual = this.gatherableVisuals.get(gatherable.id) ?? this.createGatherableVisual(gatherable);
+      const position = this.getGatherablePosition(gatherable);
+      const width = this.getGatherableWidth(gatherable);
+      const height = this.getGatherableHeight(gatherable);
+
+      this.gatherableVisuals.set(gatherable.id, visual);
+      visual.gatherable = gatherable;
+      visual.container.setData('gatherable', gatherable);
+      visual.container.setPosition(position.x, position.y);
+      visual.image.setDisplaySize(width, height);
+      visual.hitArea.setSize(width * 0.82, height * 0.78);
+      visual.shadow.setSize(width * 0.7, Math.max(12, height * 0.18));
+      visual.shadow.setPosition(0, height * 0.34);
+      visual.badge.setText(`${gatherable.clicksRemaining}`);
+      visual.badge.setPosition(width * 0.3, -height * 0.33);
+      visual.container.setAlpha(gatherable.poolRemaining > 0 ? 1 : 0.35);
+    }
   }
 
   private updateBackdrop(stageKey: string) {
@@ -217,6 +283,89 @@ export class TownScene extends Phaser.Scene {
     };
   }
 
+  private createGatherableVisual(gatherable: TownGatherableSnapshot) {
+    const position = this.getGatherablePosition(gatherable);
+    const width = this.getGatherableWidth(gatherable);
+    const height = this.getGatherableHeight(gatherable);
+    const asset = GATHERING_ASSETS[gatherable.resourceId];
+
+    const shadow = this.add.ellipse(0, height * 0.34, width * 0.7, Math.max(12, height * 0.18), 0x17211f, 0.32).setDepth(3);
+    const image = this.add.image(0, 0, asset.key).setDisplaySize(width, height).setDepth(6);
+    const hitArea = this.add.ellipse(0, 0, width * 0.82, height * 0.78, 0xffffff, 0.001).setDepth(7);
+    const badge = this.add
+      .text(width * 0.3, -height * 0.33, `${gatherable.clicksRemaining}`, {
+        align: 'center',
+        backgroundColor: 'rgba(23, 33, 31, 0.82)',
+        color: '#fff8e8',
+        fixedWidth: 24,
+        fontFamily: 'Arial, sans-serif',
+        fontSize: '13px',
+        fontStyle: 'bold',
+        padding: { x: 4, y: 2 },
+      })
+      .setOrigin(0.5)
+      .setDepth(8);
+
+    const container = this.add.container(position.x, position.y, [shadow, image, hitArea, badge]).setDepth(8);
+    container.setData('gatherable', gatherable);
+
+    const emitGather = () => {
+      if (this.inputLocked) {
+        return;
+      }
+
+      const current = container.getData('gatherable') as TownGatherableSnapshot;
+      this.showFloatingGain(container.x, container.y - height * 0.34);
+      this.tweens.add({
+        targets: image,
+        scaleX: image.scaleX * 1.07,
+        scaleY: image.scaleY * 1.07,
+        duration: 80,
+        yoyo: true,
+        ease: 'Sine.easeOut',
+      });
+      this.game.events.emit('town:gather-resource', current.resourceId);
+    };
+
+    hitArea
+      .setInteractive({ useHandCursor: true })
+      .on(Phaser.Input.Events.POINTER_UP, emitGather)
+      .on(Phaser.Input.Events.POINTER_OVER, () => image.setTint(0xfff0be))
+      .on(Phaser.Input.Events.POINTER_OUT, () => image.clearTint());
+
+    return {
+      container,
+      image,
+      hitArea,
+      shadow,
+      badge,
+      gatherable,
+    };
+  }
+
+  private showFloatingGain(x: number, y: number) {
+    const text = this.add
+      .text(x, y, '+1', {
+        color: '#fff8e8',
+        fontFamily: 'Arial, sans-serif',
+        fontSize: '20px',
+        fontStyle: 'bold',
+        stroke: '#17211f',
+        strokeThickness: 4,
+      })
+      .setOrigin(0.5)
+      .setDepth(20);
+
+    this.tweens.add({
+      targets: text,
+      y: y - 34,
+      alpha: 0,
+      duration: 700,
+      ease: 'Cubic.easeOut',
+      onComplete: () => text.destroy(),
+    });
+  }
+
   private layoutTown() {
     const { width, height } = this.scale;
 
@@ -235,6 +384,19 @@ export class TownScene extends Phaser.Scene {
       visual.body.setPosition(0, 0);
       visual.label.setPosition(0, -8);
       visual.detail.setPosition(0, 10);
+    }
+
+    for (const visual of this.gatherableVisuals.values()) {
+      const position = this.getGatherablePosition(visual.gatherable);
+      const width = this.getGatherableWidth(visual.gatherable);
+      const height = this.getGatherableHeight(visual.gatherable);
+
+      visual.container.setPosition(position.x, position.y);
+      visual.image.setDisplaySize(width, height);
+      visual.hitArea.setSize(width * 0.82, height * 0.78);
+      visual.shadow.setSize(width * 0.7, Math.max(12, height * 0.18));
+      visual.shadow.setPosition(0, height * 0.34);
+      visual.badge.setPosition(width * 0.3, -height * 0.33);
     }
   }
 
@@ -268,5 +430,26 @@ export class TownScene extends Phaser.Scene {
 
   private getHotspotHeight(hotspot: TownHotspotSnapshot) {
     return Math.max(52, (this.backdrop?.displayHeight ?? this.scale.height) * hotspot.height);
+  }
+
+  private getGatherablePosition(gatherable: TownGatherableSnapshot) {
+    const { width, height } = this.scale;
+    const backdropWidth = this.backdrop?.displayWidth ?? width;
+    const backdropHeight = this.backdrop?.displayHeight ?? height;
+    const left = width / 2 - backdropWidth / 2;
+    const top = height / 2 - backdropHeight / 2;
+
+    return {
+      x: left + gatherable.x * backdropWidth,
+      y: top + gatherable.y * backdropHeight,
+    };
+  }
+
+  private getGatherableWidth(gatherable: TownGatherableSnapshot) {
+    return Math.max(86, (this.backdrop?.displayWidth ?? this.scale.width) * gatherable.width);
+  }
+
+  private getGatherableHeight(gatherable: TownGatherableSnapshot) {
+    return Math.max(72, (this.backdrop?.displayHeight ?? this.scale.height) * gatherable.height);
   }
 }

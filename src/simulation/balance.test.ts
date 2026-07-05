@@ -96,22 +96,19 @@ describe('book value production balance', () => {
 
     expect(reports.map((report) => report.bookId)).toEqual([
       'deep_veins',
-      'coal_seams',
-      'stone_surveying',
       'mine_cart_rails',
       'sharp_axes',
       'forest_paths',
       'crop_rotation',
       'efficient_harvesting',
       'preservation_methods',
-      'efficient_kitchens',
       'hearty_recipes',
       'hotter_furnaces',
       'coal_efficiency',
-      'refining_techniques',
-      'swordsmith_manual',
       'bowyer_techniques',
       'weapon_contracts',
+      'mason_squares',
+      'hoist_rigging',
     ]);
 
     for (const report of reports) {

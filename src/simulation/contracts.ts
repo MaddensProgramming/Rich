@@ -1,6 +1,7 @@
 import { chapterIds } from '../data/chapterProjects';
 import { contractById, contracts } from '../data/contracts';
 import type { ContractDefinition, GameState } from './types';
+import { autoEquipBestBooks } from './books';
 import { canAffordResources, cloneGameState, spendResources } from './utils';
 
 const chapterOrder = (chapterId: GameState['campaign']['chapterId']) => chapterIds.indexOf(chapterId);
@@ -76,5 +77,5 @@ export const completeContract = (state: GameState, contractId: string): GameStat
   next.campaign.completedContractIds = Array.from(
     new Set([...next.campaign.completedContractIds, contractId]),
   );
-  return next;
+  return autoEquipBestBooks(next);
 };

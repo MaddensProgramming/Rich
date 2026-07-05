@@ -1134,7 +1134,7 @@ input[type="checkbox"] {
 
 .book-shelf {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
   gap: 8px;
 }
 
@@ -1158,11 +1158,18 @@ input[type="checkbox"] {
   border-radius: 4px 7px 7px 4px;
   background: #5f735f;
   box-shadow: inset 5px 0 0 rgba(255, 255, 255, 0.16), 0 5px 12px rgba(24, 44, 39, 0.14);
+  cursor: default;
 }
 
 .book-tile-wrap.equipped .book-tile {
   border-color: #d89f38;
   box-shadow: 0 0 0 2px rgba(229, 176, 69, 0.42), 0 8px 18px rgba(117, 77, 24, 0.2);
+}
+
+.book-tile-wrap:focus-visible {
+  outline: 2px solid #d89f38;
+  outline-offset: 3px;
+  border-radius: 8px;
 }
 
 .book-cover {
@@ -1268,6 +1275,44 @@ input[type="checkbox"] {
   display: flex;
   justify-content: center;
   gap: 3px;
+}
+
+.book-rarity-counts {
+  width: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 3px;
+  min-height: 20px;
+}
+
+.rarity-count {
+  min-width: 28px;
+  padding: 1px 4px;
+  border: 1px solid rgba(87, 103, 94, 0.45);
+  border-radius: 999px;
+  color: #263730;
+  background: #eef2ea;
+  font-size: 0.56rem;
+  font-weight: 900;
+  line-height: 1.35;
+  text-align: center;
+}
+
+.rarity-count.rarity-uncommon {
+  background: #dcefdc;
+}
+
+.rarity-count.rarity-rare {
+  background: #d9eaf1;
+}
+
+.rarity-count.rarity-epic {
+  background: #eadceb;
+}
+
+.rarity-count.rarity-legendary {
+  background: #f4e5b6;
 }
 
 .book-tile-actions button {
@@ -1497,10 +1542,6 @@ input[type="checkbox"] {
   gap: 6px;
 }
 
-.popup-gathering-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
 .empty-state {
   padding: 18px;
   border: 1px dashed #aebbb3;
@@ -1658,7 +1699,6 @@ input[type="checkbox"] {
 
   .popup-grid,
   .popup-action-grid,
-  .popup-gathering-grid,
   .project-contribution-row {
     grid-template-columns: 1fr;
   }

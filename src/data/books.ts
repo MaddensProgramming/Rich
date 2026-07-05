@@ -23,22 +23,8 @@ export const books: BookDefinition[] = [
     id: 'deep_veins',
     label: 'Deep Veins',
     buildingId: 'mine',
-    description: 'Iron ore output is increased.',
-    effect: { type: 'outputMultiplier', resourceId: 'iron_ore', value: 0.15 },
-  },
-  {
-    id: 'coal_seams',
-    label: 'Coal Seams',
-    buildingId: 'mine',
-    description: 'Coal output is increased.',
-    effect: { type: 'outputMultiplier', resourceId: 'coal', value: 0.15 },
-  },
-  {
-    id: 'stone_surveying',
-    label: 'Stone Surveying',
-    buildingId: 'mine',
-    description: 'Stone output is increased.',
-    effect: { type: 'outputMultiplier', resourceId: 'stone', value: 0.15 },
+    description: 'Mine output is increased when working rich ore.',
+    effect: { type: 'outputMultiplier', resourceId: 'iron_ore', value: 0.18 },
   },
   {
     id: 'mine_cart_rails',
@@ -83,13 +69,6 @@ export const books: BookDefinition[] = [
     effect: { type: 'outputMultiplier', resourceId: 'food', value: 0.18 },
   },
   {
-    id: 'efficient_kitchens',
-    label: 'Efficient Kitchens',
-    buildingId: 'food_maker',
-    description: 'Vegetable input cost is reduced.',
-    effect: { type: 'inputMultiplier', resourceId: 'vegetables', value: -0.2 },
-  },
-  {
     id: 'hearty_recipes',
     label: 'Hearty Recipes',
     buildingId: 'food_maker',
@@ -111,20 +90,6 @@ export const books: BookDefinition[] = [
     effect: { type: 'inputMultiplier', resourceId: 'coal', value: -0.15 },
   },
   {
-    id: 'refining_techniques',
-    label: 'Refining Techniques',
-    buildingId: 'smelter',
-    description: 'Iron ore input cost is reduced.',
-    effect: { type: 'inputMultiplier', resourceId: 'iron_ore', value: -0.08 },
-  },
-  {
-    id: 'swordsmith_manual',
-    label: 'Swordsmith Manual',
-    buildingId: 'blacksmith',
-    description: 'Sword output is increased.',
-    effect: { type: 'outputMultiplier', resourceId: 'swords', value: 0.04 },
-  },
-  {
     id: 'bowyer_techniques',
     label: 'Bowyer Techniques',
     buildingId: 'blacksmith',
@@ -137,6 +102,20 @@ export const books: BookDefinition[] = [
     buildingId: 'blacksmith',
     description: 'Selling weapons has less market price impact.',
     effect: { type: 'marketImpactMultiplier', resourceId: 'swords', value: -0.18 },
+  },
+  {
+    id: 'mason_squares',
+    label: 'Mason Squares',
+    buildingId: 'stonemason',
+    description: 'Stone block output is increased.',
+    effect: { type: 'outputMultiplier', resourceId: 'stone_blocks', value: 0.1 },
+  },
+  {
+    id: 'hoist_rigging',
+    label: 'Hoist Rigging',
+    buildingId: 'stonemason',
+    description: 'Stonemason worker crowding is reduced.',
+    effect: { type: 'efficiencyExponent', value: 0.05 },
   },
 ];
 

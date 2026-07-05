@@ -3,6 +3,7 @@ import { contractById } from '../data/contracts';
 import { buildingById, buildingIds } from '../data/buildings';
 import { bookById, rarities } from '../data/books';
 import { resourceIds } from '../data/resources';
+import { autoEquipBestBooks } from './books';
 import type {
   BuildingState,
   BookKey,
@@ -471,7 +472,7 @@ export const sanitizeGameState = (value: unknown, now = Date.now()): GameState =
     };
   }
 
-  return next;
+  return autoEquipBestBooks(next);
 };
 
 export const addOfflineCharge = (state: GameState, elapsedSeconds: number): GameState => {

@@ -13,6 +13,8 @@ Recommended stack:
 - Zustand or another lightweight store for shared state.
 - Vitest for simulation and economy tests.
 
+Target desktop browsers only. Do not spend effort optimizing the layout, touch ergonomics, or interaction model for mobile unless the user explicitly changes the project direction.
+
 Keep simulation logic separate from React and Phaser. UI code may display state and dispatch actions, but production rules, market math, food penalties, books, save/load shape, and offline boost behavior belong in the simulation layer.
 
 Keep `README.md` up to date whenever implemented gameplay, architecture, setup, deployment, or testing behavior changes.

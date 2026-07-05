@@ -78,7 +78,7 @@ export const contracts: ContractDefinition[] = [
     minChapterId: 'mountain_town',
     requiredResources: { stone_blocks: 45, tools: 30 },
     rewardMoney: 3900,
-    rewardBooks: [{ bookId: 'stone_surveying', rarity: 'rare', count: 1 }],
+    rewardBooks: [{ bookId: 'mason_squares', rarity: 'rare', count: 1 }],
   },
   {
     id: 'summit_caravan',

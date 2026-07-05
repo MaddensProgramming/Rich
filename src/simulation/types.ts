@@ -46,22 +46,19 @@ export type BookRarity = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
 
 export type BookId =
   | 'deep_veins'
-  | 'coal_seams'
-  | 'stone_surveying'
   | 'mine_cart_rails'
   | 'sharp_axes'
   | 'forest_paths'
   | 'crop_rotation'
   | 'efficient_harvesting'
   | 'preservation_methods'
-  | 'efficient_kitchens'
   | 'hearty_recipes'
   | 'hotter_furnaces'
   | 'coal_efficiency'
-  | 'refining_techniques'
-  | 'swordsmith_manual'
   | 'bowyer_techniques'
-  | 'weapon_contracts';
+  | 'weapon_contracts'
+  | 'mason_squares'
+  | 'hoist_rigging';
 
 export type BookKey = `${BookId}:${BookRarity}`;
 

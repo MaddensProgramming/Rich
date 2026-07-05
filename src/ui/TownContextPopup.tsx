@@ -9,7 +9,6 @@ import {
   getCampaignChapter,
   getCurrentUpgradeProject,
   getCurrentUpgradeProjectProgress,
-  getTownFoodConsumptionPerSecond,
   getUpgradeProjectDeliveries,
   getUpgradeProjectMoneyDelivered,
   isBuildingConstructed,
@@ -172,6 +171,7 @@ function BuildingPopup({ game, selection }: { game: GameStore; selection: TownHo
   const upgradeCost = getBuildingUpgradeCost(game, definition.id);
   const canUpgrade = building.level < MAX_BUILDING_LEVEL && canAffordResources(game.resources, upgradeCost);
   const availableWorkers = game.workers.total - game.definitions.buildings.reduce((total, item) => total + game.buildings[item.id].workers, 0);
+  const canAssignWorkers = chapter.availableBuildingIds.includes(definition.id);
   const primaryOutputId = Object.keys(recipe.outputs)[0] as keyof typeof game.resources | undefined;
   const primaryOutputRate = primaryOutputId ? game.stats.buildingProductionPerSecond[definition.id][primaryOutputId] : 0;
   const availableRecipes = definition.recipes.filter((recipeId) => chapter.availableRecipeIds.includes(recipeId));
@@ -189,7 +189,7 @@ function BuildingPopup({ game, selection }: { game: GameStore; selection: TownHo
               type="button"
               aria-label={`Remove worker from ${displayLabel}`}
               onClick={() => game.assignWorkers(definition.id, building.workers - 1)}
-              disabled={building.workers <= 0}
+              disabled={!canAssignWorkers || building.workers <= 0}
             >
               -
             </button>
@@ -198,7 +198,7 @@ function BuildingPopup({ game, selection }: { game: GameStore; selection: TownHo
               type="button"
               aria-label={`Add worker to ${displayLabel}`}
               onClick={() => game.assignWorkers(definition.id, building.workers + 1)}
-              disabled={availableWorkers <= 0}
+              disabled={!canAssignWorkers || availableWorkers <= 0}
             >
               +
             </button>
@@ -492,97 +492,6 @@ function ProjectPopup({ game, onOpenHotspot }: Pick<TownContextPopupProps, 'game
   );
 }
 
-function GatheringPopup({ game, onOpenHotspot }: Pick<TownContextPopupProps, 'game' | 'onOpenHotspot'>) {
-  const availableWorkers = game.workers.total - game.definitions.buildings.reduce((total, item) => total + game.buildings[item.id].workers, 0);
-  const chapter = getCampaignChapter(game);
-  const shortcutBuildingIds = (['mine', 'lumberjack', 'farm'] as const).filter((buildingId) =>
-    chapter.availableBuildingIds.includes(buildingId),
-  );
-  const gatherOptions = [
-    {
-      resourceId: 'wood' as const,
-      label: 'Clearing wood',
-      pool: game.campaign.clearingWood,
-      actionLabel: 'Chop Wood',
-      onGather: game.gatherClearingWood,
-    },
-    {
-      resourceId: 'stone' as const,
-      label: 'Loose stone',
-      pool: game.campaign.clearingStone,
-      actionLabel: 'Gather Stone',
-      onGather: game.gatherLooseStone,
-    },
-    {
-      resourceId: 'vegetables' as const,
-      label: 'Forage',
-      pool: game.campaign.clearingVegetables,
-      actionLabel: 'Forage Vegetables',
-      onGather: game.forageVegetables,
-    },
-  ];
-
-  return (
-    <section className="popup-section popup-gathering">
-      <div className="popup-copy">
-        <p>Gather by hand while the first work sites are still being built.</p>
-      </div>
-
-      <div className="popup-grid popup-gathering-grid">
-        {gatherOptions.map(({ resourceId, label, pool }) => (
-          <div key={resourceId}>
-            <span className="popup-label">
-              <ResourceIcon resourceId={resourceId} />
-              {label}
-            </span>
-            <strong className="popup-strong">{formatNumber(pool, 0)}</strong>
-          </div>
-        ))}
-        <div>
-          <span className="popup-label">Town food use</span>
-          <strong className="popup-strong">{formatNumber(getTownFoodConsumptionPerSecond(game), 2)}/s</strong>
-        </div>
-      </div>
-
-      <div className="popup-action-grid">
-        {gatherOptions.map(({ resourceId, pool, actionLabel, onGather }) => (
-          <button
-            type="button"
-            key={resourceId}
-            onClick={() => onGather()}
-            disabled={!game.campaign.unlockedSystems.manualGather || pool <= 0}
-          >
-            {actionLabel} +1
-          </button>
-        ))}
-      </div>
-
-      <div className="popup-action-grid">
-        {shortcutBuildingIds.map((buildingId) => (
-          <button
-            key={buildingId}
-            type="button"
-            onClick={() =>
-              onOpenHotspot({
-                id: buildingId,
-                kind: 'building',
-                label: getStageBuildingLabel(game, buildingId),
-                buildingId,
-              })
-            }
-          >
-            Open {getStageBuildingLabel(game, buildingId)}
-          </button>
-        ))}
-      </div>
-
-      <div className="popup-copy">
-        <p>{availableWorkers} idle workers available for building assignment.</p>
-      </div>
-    </section>
-  );
-}
-
 export function TownContextPopup({
   game,
   selection,
@@ -648,7 +557,7 @@ export function TownContextPopup({
       return <ProjectPopup game={game} onOpenHotspot={onOpenHotspot} />;
     }
 
-    return <GatheringPopup game={game} onOpenHotspot={onOpenHotspot} />;
+    return null;
   })();
 
   return (

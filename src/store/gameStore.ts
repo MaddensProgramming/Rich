@@ -130,7 +130,7 @@ export interface GameStore extends GameState {
   forageVegetables: (amount?: number) => void;
   contributeToUpgradeProject: (contributions: ResourceMap, money?: number) => void;
   advanceChapter: () => void;
-  buyBookPack: () => void;
+  buyBookPack: (packCount?: number) => void;
   equipBook: (
     buildingId: BuildingId,
     bookId: BookId | null,
@@ -234,8 +234,8 @@ export const useGameStore = create<GameStore>((set, get) => {
       set((state) => withDerivedState(advanceChapterInState(state)));
     },
 
-    buyBookPack: () => {
-      set((state) => withDerivedState(buyBookPackInState(state)));
+    buyBookPack: (packCount = 1) => {
+      set((state) => withDerivedState(buyBookPackInState(state, packCount)));
     },
 
     equipBook: (buildingId, bookId, rarity = 'common', slotIndex) => {

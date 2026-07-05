@@ -1,13 +1,15 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
   BASIC_BOOK_PACK_COST,
+  BASIC_BOOK_PACK_SIZE,
   BOOK_UPGRADE_COPY_COST,
   canUpgradeBook,
   describeBookEffect,
+  getBestOwnedBook,
   getNextRarity,
-  ownedBookEntries,
+  getOwnedBookCount,
 } from '../simulation';
-import type { BookEffect, BuildingId } from '../simulation';
+import type { BookEffect, BookId, BookRarity } from '../simulation';
 import type { GameStore } from '../store/gameStore';
 
 interface LibraryPanelProps {
@@ -38,18 +40,45 @@ const getBookInitials = (label: string) =>
     .join('')
     .toUpperCase();
 
+const findUpgradableRarity = (game: GameStore, bookId: BookId) =>
+  game.definitions.rarities.find((rarity) => canUpgradeBook(game, bookId, rarity)) ?? null;
+
 export function LibraryPanel({ game }: LibraryPanelProps) {
   const [bookTooltip, setBookTooltip] = useState<BookTooltip | null>(null);
-  const ownedBooks = ownedBookEntries(game);
-  const hasAnyUpgradable = ownedBooks.some((entry) => canUpgradeBook(game, entry.bookId, entry.rarity));
-  const groupedBooks = game.definitions.buildings
-    .map((building) => ({
-      building,
-      entries: ownedBooks.filter(
-        (entry) => game.definitions.bookById[entry.bookId].buildingId === building.id,
-      ),
-    }))
-    .filter((group) => group.entries.length > 0);
+  const hasAnyUpgradable = game.definitions.books.some((book) =>
+    game.definitions.rarities.some((rarity) => canUpgradeBook(game, book.id, rarity)),
+  );
+  const groupedBooks = useMemo(
+    () =>
+      game.definitions.buildings
+        .map((building) => ({
+          building,
+          entries: game.definitions.books
+            .filter((book) => book.buildingId === building.id)
+            .map((book) => {
+              const counts = game.definitions.rarities
+                .map((rarity) => ({
+                  rarity,
+                  count: getOwnedBookCount(game, book.id, rarity),
+                }))
+                .filter((entry) => entry.count > 0);
+              const total = counts.reduce((sum, entry) => sum + entry.count, 0);
+              const bestOwned = getBestOwnedBook(game, book.id);
+              const upgradableRarity = findUpgradableRarity(game, book.id);
+
+              return {
+                definition: book,
+                counts,
+                total,
+                bestOwned,
+                upgradableRarity,
+              };
+            })
+            .filter((entry) => entry.total > 0),
+        }))
+        .filter((group) => group.entries.length > 0),
+    [game],
+  );
 
   const showBookTooltip = useCallback((text: string, element: HTMLElement) => {
     const rect = element.getBoundingClientRect();
@@ -76,10 +105,17 @@ export function LibraryPanel({ game }: LibraryPanelProps) {
       <div className="panel-heading">
         <div>
           <h2>Library</h2>
-          <p>Equip up to two books per building. Five duplicates upgrade to the next rarity.</p>
+          <p>Two books per building auto-equip at the highest owned rarity. Five duplicates upgrade.</p>
         </div>
-        <button type="button" onClick={game.buyBookPack} disabled={game.money < BASIC_BOOK_PACK_COST}>
+        <button type="button" onClick={() => game.buyBookPack()} disabled={game.money < BASIC_BOOK_PACK_COST}>
           Buy Pack ${BASIC_BOOK_PACK_COST}
+        </button>
+        <button
+          type="button"
+          onClick={() => game.buyBookPack(10)}
+          disabled={game.money < BASIC_BOOK_PACK_COST * 10}
+        >
+          Buy 10 Packs ${BASIC_BOOK_PACK_COST * 10}
         </button>
         <button
           type="button"
@@ -102,125 +138,96 @@ export function LibraryPanel({ game }: LibraryPanelProps) {
       ) : null}
 
       <div className="book-groups">
-        {ownedBooks.length === 0 ? (
-          <div className="empty-state">No books owned yet.</div>
+        {groupedBooks.length === 0 ? (
+          <div className="empty-state">
+            No books owned yet. Each pack contains {BASIC_BOOK_PACK_SIZE} random books.
+          </div>
         ) : (
           groupedBooks.map(({ building, entries }) => {
+            const equippedCount = game.buildings[building.id].equippedBooks.length;
+
             return (
               <section className="book-building-group" key={building.id}>
                 <div className="book-building-heading">
                   <h3>{building.label}</h3>
                   <span>
-                    {game.buildings[building.id as BuildingId].equippedBooks.length}/2 equipped
+                    {equippedCount}/2 auto equipped
                   </span>
                   <button
                     type="button"
                     className="book-group-upgrade-all"
-                    onClick={() => {
-                      const bookIds = new Set(entries.map((entry) => entry.bookId));
-                      bookIds.forEach((bookId) => game.upgradeAllBooks(bookId));
-                    }}
-                    disabled={!entries.some((entry) => canUpgradeBook(game, entry.bookId, entry.rarity))}
+                    onClick={() => entries.forEach((entry) => game.upgradeAllBooks(entry.definition.id))}
+                    disabled={!entries.some((entry) => entry.upgradableRarity)}
                     title="Upgrade all books for this building"
                   >
                     Upgrade All
                   </button>
                 </div>
                 <div className="book-shelf" aria-label={`${building.label} books`}>
-                  {entries.map((entry) => {
-                    const definition = game.definitions.bookById[entry.bookId];
-                    const buildingState = game.buildings[definition.buildingId];
-                    const equippedIndex = buildingState.equippedBooks.findIndex(
-                      (book) => book.bookId === entry.bookId && book.rarity === entry.rarity,
-                    );
-                    const nextRarity = getNextRarity(entry.rarity);
-                    const canUpgrade = canUpgradeBook(game, entry.bookId, entry.rarity);
+                  {entries.map(({ definition, counts, total, bestOwned, upgradableRarity }) => {
+                    const displayRarity = bestOwned?.rarity ?? 'common';
                     const effectLabel = effectKindLabels[definition.effect.type];
-                    const effectText = describeBookEffect(entry.bookId, entry.rarity);
+                    const effectText = bestOwned
+                      ? describeBookEffect(definition.id, bestOwned.rarity)
+                      : definition.description;
+                    const countText = counts
+                      .map(
+                        (entry) =>
+                          `${game.definitions.rarityLabels[entry.rarity]}: ${entry.count}`,
+                      )
+                      .join('\n');
+                    const nextRarity = upgradableRarity ? getNextRarity(upgradableRarity) : null;
                     const tooltip = [
-                      `${definition.label} · ${game.definitions.rarityLabels[entry.rarity]}`,
+                      `${definition.label} · best ${game.definitions.rarityLabels[displayRarity]}`,
                       definition.description,
                       effectText,
-                      `Owned: ${entry.count}${nextRarity ? ` / ${BOOK_UPGRADE_COPY_COST} to upgrade` : ''}`,
-                      equippedIndex >= 0 ? `Equipped in slot ${equippedIndex + 1}` : 'Click to equip.',
+                      countText,
+                      `Total owned: ${total}`,
+                      bestOwned ? 'Highest rarity auto-equipped.' : 'No copy owned.',
                     ].join('\n');
 
                     return (
                       <article
-                        className={`book-tile-wrap${equippedIndex >= 0 ? ' equipped' : ''}`}
-                        key={`${entry.bookId}-${entry.rarity}`}
+                        className="book-tile-wrap equipped"
+                        key={definition.id}
                         onBlur={hideBookTooltip}
                         onFocus={(event) => showBookTooltip(tooltip, event.currentTarget)}
                         onMouseEnter={(event) => showBookTooltip(tooltip, event.currentTarget)}
                         onMouseLeave={hideBookTooltip}
+                        tabIndex={0}
+                        aria-label={tooltip}
                       >
-                        <button
-                          className={`book-tile rarity-${entry.rarity} effect-${definition.effect.type}`}
-                          type="button"
-                          onClick={() =>
-                            equippedIndex >= 0
-                              ? game.equipBook(definition.buildingId, null, entry.rarity, equippedIndex)
-                              : buildingState.equippedBooks.length < 2
-                                ? game.equipBook(definition.buildingId, entry.bookId, entry.rarity)
-                                : game.equipBook(definition.buildingId, entry.bookId, entry.rarity, 0)
-                          }
-                          aria-label={tooltip}
-                        >
+                        <div className={`book-tile rarity-${displayRarity} effect-${definition.effect.type}`}>
                           <span className="book-cover" aria-hidden="true">
                             <span className="book-spine" />
-                            <span className="book-rarity-mark">{game.definitions.rarityLabels[entry.rarity][0]}</span>
+                            <span className="book-rarity-mark">
+                              {game.definitions.rarityLabels[displayRarity][0]}
+                            </span>
                             <strong>{getBookInitials(definition.label)}</strong>
                             <span>{effectLabel}</span>
                           </span>
-                          <span className="book-copy-badge">x{entry.count}</span>
-                        </button>
+                          <span className="book-copy-badge">x{total}</span>
+                        </div>
+                        <div className="book-rarity-counts" aria-hidden="true">
+                          {counts.map((entry) => (
+                            <span className={`rarity-count rarity-${entry.rarity}`} key={entry.rarity}>
+                              {game.definitions.rarityLabels[entry.rarity][0]} {entry.count}
+                            </span>
+                          ))}
+                        </div>
                         <div className="book-tile-actions">
-                          {equippedIndex >= 0 ? (
-                            <button
-                              type="button"
-                              onClick={() =>
-                                game.equipBook(definition.buildingId, null, entry.rarity, equippedIndex)
-                              }
-                              title="Unequip this book"
-                            >
-                              Off
-                            </button>
-                          ) : buildingState.equippedBooks.length < 2 ? (
-                            <button
-                              type="button"
-                              onClick={() => game.equipBook(definition.buildingId, entry.bookId, entry.rarity)}
-                              title="Equip this book"
-                            >
-                              Eq
-                            </button>
-                          ) : (
-                            <>
-                              <button
-                                type="button"
-                                onClick={() => game.equipBook(definition.buildingId, entry.bookId, entry.rarity, 0)}
-                                title="Replace equipped slot 1"
-                              >
-                                1
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => game.equipBook(definition.buildingId, entry.bookId, entry.rarity, 1)}
-                                title="Replace equipped slot 2"
-                              >
-                                2
-                              </button>
-                            </>
-                          )}
                           <button
                             type="button"
-                            onClick={() => game.upgradeBook(entry.bookId, entry.rarity)}
-                            disabled={!canUpgrade}
+                            onClick={() => {
+                              if (upgradableRarity) {
+                                game.upgradeBook(definition.id, upgradableRarity as BookRarity);
+                              }
+                            }}
+                            disabled={!upgradableRarity}
                             title={
-                              canUpgrade
-                                ? `Upgrade to ${game.definitions.rarityLabels[nextRarity!]}`
-                                : nextRarity
-                                  ? `Needs ${BOOK_UPGRADE_COPY_COST} copies`
-                                  : 'Already max rarity'
+                              upgradableRarity && nextRarity
+                                ? `Upgrade ${BOOK_UPGRADE_COPY_COST} ${game.definitions.rarityLabels[upgradableRarity]} copies to ${game.definitions.rarityLabels[nextRarity]}`
+                                : 'Needs more duplicates'
                             }
                           >
                             Up

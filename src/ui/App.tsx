@@ -7,6 +7,7 @@ import { storySegmentById, type StorySegmentId } from '../data/story';
 import { TownContextPopup, readCampaignDisplay } from './TownContextPopup';
 import { TownView } from './TownView';
 import type { TownHotspotSelection } from './townHotspots';
+import type { TownGatherableSnapshot } from '../game/scenes/TownScene';
 import { formatNumber } from './format';
 
 export function App() {
@@ -53,6 +54,24 @@ export function App() {
     setActiveHotspot(selection);
     setActiveHotspotVersion((version) => version + 1);
   }, []);
+
+  const gatherResource = useCallback((resourceId: TownGatherableSnapshot['resourceId']) => {
+    if (performance.now() < townInputBlockedUntilRef.current) {
+      return;
+    }
+
+    if (resourceId === 'wood') {
+      game.gatherClearingWood();
+      return;
+    }
+
+    if (resourceId === 'stone') {
+      game.gatherLooseStone();
+      return;
+    }
+
+    game.forageVegetables();
+  }, [game.gatherClearingWood, game.gatherLooseStone, game.forageVegetables]);
 
   const blockTownInputBriefly = useCallback(() => {
     townInputBlockedUntilRef.current = performance.now() + 180;
@@ -180,6 +199,7 @@ export function App() {
             selectedHotspotId={activeHotspot?.id ?? null}
             inputLocked={Boolean(activeHotspot)}
             onSelectHotspot={selectHotspot}
+            onGatherResource={gatherResource}
           />
           {activeHotspot ? (
             <TownContextPopup

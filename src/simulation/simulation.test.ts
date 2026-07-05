@@ -253,6 +253,10 @@ describe('simulation campaign cut', () => {
     const afterBookPack = buyBookPack({ ...village, money: 200 });
     expect(afterBookPack.money).toBeLessThan(200);
     expect(afterBookPack.recentBookPack).toHaveLength(3);
+
+    const afterTenPacks = buyBookPack({ ...village, money: 2000 }, 10);
+    expect(afterTenPacks.money).toBe(800);
+    expect(afterTenPacks.recentBookPack).toHaveLength(30);
   });
 
   it('tracks seen story chapters and victory without duplicates', () => {
@@ -277,16 +281,47 @@ describe('simulation campaign cut', () => {
     const stocked = {
       ...village,
       campaign: { ...village.campaign, unlockedSystems: { ...village.campaign.unlockedSystems, library: true } },
-      books: { owned: { 'sharp_axes:common': 5, 'crop_rotation:common': 4 } },
+      books: { owned: { 'sharp_axes:common': 5, 'forest_paths:common': 1, 'crop_rotation:common': 4 } },
     };
 
     const upgraded = upgradeAllBooks(stocked, 'sharp_axes');
     expect(getOwnedBookCount(upgraded, 'sharp_axes', 'common')).toBe(0);
     expect(getOwnedBookCount(upgraded, 'sharp_axes', 'uncommon')).toBe(1);
+    expect(upgraded.buildings.lumberjack.equippedBooks).toEqual([
+      { bookId: 'sharp_axes', rarity: 'uncommon' },
+      { bookId: 'forest_paths', rarity: 'common' },
+    ]);
 
     const allUpgraded = upgradeAllPossibleBooks(stocked);
     expect(getOwnedBookCount(allUpgraded, 'sharp_axes', 'uncommon')).toBe(1);
     expect(getOwnedBookCount(allUpgraded, 'crop_rotation', 'common')).toBe(4);
+  });
+
+  it('auto-equips the highest owned rarity for each building book', () => {
+    const village = reachVillage();
+    const stocked = hydrateGameState(
+      {
+        ...village,
+        campaign: { ...village.campaign, unlockedSystems: { ...village.campaign.unlockedSystems, library: true } },
+        books: {
+          owned: {
+            'deep_veins:common': 1,
+            'deep_veins:rare': 1,
+            'mine_cart_rails:uncommon': 1,
+            'sharp_axes:common': 1,
+          },
+        },
+      },
+      0,
+    );
+
+    expect(stocked.buildings.mine.equippedBooks).toEqual([
+      { bookId: 'deep_veins', rarity: 'rare' },
+      { bookId: 'mine_cart_rails', rarity: 'uncommon' },
+    ]);
+    expect(stocked.buildings.lumberjack.equippedBooks).toEqual([
+      { bookId: 'sharp_axes', rarity: 'common' },
+    ]);
   });
 
   it('accepts and completes contracts, consuming goods and granting rewards', () => {

@@ -2,7 +2,9 @@ import { useEffect, useRef } from 'react';
 import {
   MAX_BUILDING_LEVEL,
   canAffordResources,
+  getCampaignChapter,
   getBuildingUpgradeCost,
+  isBuildingConstructed,
 } from '../simulation';
 import type { GameStore } from '../store/gameStore';
 import type { BuildingId, ResourceMap } from '../simulation';
@@ -61,6 +63,7 @@ export function BuildingPanel({ game, selectedBuildingId, selectedBuildingVersio
     0,
   );
   const availableWorkers = game.workers.total - assignedWorkers;
+  const chapter = getCampaignChapter(game);
 
   useEffect(() => {
     if (!selectedBuildingId) {
@@ -95,6 +98,9 @@ export function BuildingPanel({ game, selectedBuildingId, selectedBuildingVersio
           const canUpgrade =
             building.level < MAX_BUILDING_LEVEL && canAffordResources(game.resources, upgradeCost);
           const blockedReason = game.stats.blockedBuildings[definition.id];
+          const canAssignWorkers =
+            isBuildingConstructed(game, definition.id) &&
+            chapter.availableBuildingIds.includes(definition.id);
           const primaryOutputId = Object.keys(recipe.outputs)[0] as keyof typeof game.resources | undefined;
           const primaryOutputRate = primaryOutputId
             ? game.stats.buildingProductionPerSecond[definition.id][primaryOutputId]
@@ -126,7 +132,7 @@ export function BuildingPanel({ game, selectedBuildingId, selectedBuildingVersio
                   type="button"
                   aria-label={`Remove worker from ${definition.label}`}
                   onClick={() => game.assignWorkers(definition.id, building.workers - 1)}
-                  disabled={building.workers <= 0}
+                  disabled={!canAssignWorkers || building.workers <= 0}
                 >
                   -
                 </button>
@@ -135,7 +141,7 @@ export function BuildingPanel({ game, selectedBuildingId, selectedBuildingVersio
                   type="button"
                   aria-label={`Add worker to ${definition.label}`}
                   onClick={() => game.assignWorkers(definition.id, building.workers + 1)}
-                  disabled={availableWorkers <= 0}
+                  disabled={!canAssignWorkers || availableWorkers <= 0}
                 >
                   +
                 </button>

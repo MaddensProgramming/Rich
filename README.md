@@ -4,6 +4,8 @@ St. Moritz is a browser idle and management game about rebuilding a mountain set
 
 St. Moritz is a finite, chapter-based browser management game. It uses Vite, React, TypeScript, Phaser, Zustand, and Vitest. The game runs entirely in the browser and saves progress to `localStorage`.
 
+The project currently targets desktop browsers only. Mobile layout and touch-first ergonomics are not a product focus.
+
 ## Play Online
 
 The GitHub Pages deployment is configured for:
@@ -29,8 +31,9 @@ GitHub Pages must be enabled in the repository settings with **Source** set to *
 
 ### Manual Gathering And Construction
 
-- Arrival supports manual actions for chopping wood, gathering stone, and foraging vegetables.
-- Manual gathering adds 1 resource per click and consumes the matching finite clearing pool.
+- Arrival supports manual resource props for wood, stone, and berries layered directly over the town picture.
+- Clicking a resource prop adds 1 matching resource, shows a floating +1, and consumes the matching finite clearing pool.
+- Each visible resource prop represents a 10-click cache. When its cache is exhausted, it disappears; if that clearing pool still has resources left, the next cache appears elsewhere on the town picture.
 - Buildings start unconstructed and must be built before workers can be assigned or production can run.
 - Arrival exposes the Mine Entrance and Logging Camp as the first buildable sites.
 - Farm and Cookhouse unlock in Hamlet.
@@ -86,7 +89,7 @@ Implemented resources:
 - Tools (Mountain Town finished good)
 - Stone Blocks (Mountain Town finished good)
 
-Money is tracked separately from physical resources. Resource definitions include compact fallback labels, while the React UI renders stylized SVG resource icons in the resource bar, contracts, gathering UI, and project delivery rows.
+Money is tracked separately from physical resources. Resource definitions include compact fallback labels, while the React UI renders stylized SVG resource icons in the resource bar, contracts, and project delivery rows. Manual gathering uses bitmap resource prop art on the Phaser town layer.
 
 ### Market
 
@@ -102,10 +105,12 @@ Money is tracked separately from physical resources. Resource definitions includ
 
 - The library is locked until Village.
 - Book packs cost $120 and contain 3 random books once unlocked.
-- Books are specific to buildings.
-- Each building can equip up to 2 books.
+- The library also offers a buy-10-packs control for $1,200.
+- Each building has exactly 2 building-specific book titles.
+- The best owned rarity of each building book is equipped automatically, up to one copy of each title.
 - Duplicate books can be upgraded at a rate of 5 copies into 1 copy of the next rarity.
-- Library cards are grouped by building, with "Upgrade All" per building and an "Upgrade All Possible" control for the whole library.
+- Library cards are grouped by building and show one tile per title, per-rarity ownership counts, and the tile color of the highest owned rarity.
+- Library cards include "Upgrade All" per building and an "Upgrade All Possible" control for the whole library.
 - Book effects are ignored until the library system is unlocked.
 
 ### Storyteller
@@ -135,10 +140,11 @@ Money is tracked separately from physical resources. Resource definitions includ
 ### UI
 
 - React displays resources, popups, market, library, contracts, town controls, and campaign project progress.
-- Phaser renders the town backdrop and clickable town hotspots.
+- Phaser renders the town backdrop, clickable town hotspots, and clickable manual gathering props.
 - The town image is now the main interaction layer, with generated stage-specific backdrops for Arrival, Hamlet, Village, and Mountain Town.
-- Clicking a hotspot opens one contextual popup at a time.
+- Clicking a hotspot opens one contextual popup at a time. Clicking wood, stone, or berry props gathers directly without opening a popup.
 - Escape or the close button dismisses the popup.
+- Building cards and building popups include + and - worker buttons for direct assignment.
 - The top bar keeps critical status visible.
 - The project strip shows the current chapter, project progress, and selected hotspot.
 
@@ -156,7 +162,7 @@ Vitest covers the current campaign and economy behavior:
 - Hamlet food production works after construction.
 - Market and library actions respect chapter locks.
 - Storyteller seen-chapter and victory tracking survive save/load.
-- Library upgrade-all and upgrade-all-possible promote duplicates correctly.
+- Library pack batches, automatic best-book equipment, upgrade-all, and upgrade-all-possible promote duplicates correctly.
 - Contracts unlock by chapter, show up to two offers at a time, consume goods, and grant money and book rewards.
 - Contract balance checks keep the finite queue at 10 requests and prevent money rewards from falling below market sell value unless book rewards offset part of the value.
 - The balance model keeps every project requirement line between 8% and 60% of total effort, with total effort rising each chapter, and includes per-recipe and book value production diagnostics.

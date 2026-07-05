@@ -74,6 +74,37 @@ const grantBookCopy = (state: GameState, book: EquippedBook) => {
   state.books.owned[key] = (state.books.owned[key] ?? 0) + 1;
 };
 
+export const getBestOwnedBook = (state: GameState, bookId: BookId): EquippedBook | null => {
+  for (let index = rarities.length - 1; index >= 0; index -= 1) {
+    const rarity = rarities[index];
+    if (getOwnedBookCount(state, bookId, rarity) > 0) {
+      return { bookId, rarity };
+    }
+  }
+
+  return null;
+};
+
+const autoEquipBestBooksForBuildingInPlace = (state: GameState, buildingId: BuildingId) => {
+  state.buildings[buildingId].equippedBooks = books
+    .filter((book) => book.buildingId === buildingId)
+    .map((book) => getBestOwnedBook(state, book.id))
+    .filter((book): book is EquippedBook => Boolean(book))
+    .slice(0, MAX_EQUIPPED_BOOKS_PER_BUILDING);
+};
+
+const autoEquipBestBooksInPlace = (state: GameState) => {
+  for (const buildingId of buildingIds) {
+    autoEquipBestBooksForBuildingInPlace(state, buildingId);
+  }
+};
+
+export const autoEquipBestBooks = (state: GameState): GameState => {
+  const next = cloneGameState(state);
+  autoEquipBestBooksInPlace(next);
+  return next;
+};
+
 const rollBookRarity = (roll: number): BookRarity => {
   if (roll < 0.8) {
     return 'common';
@@ -86,20 +117,23 @@ const rollBookRarity = (roll: number): BookRarity => {
   return 'rare';
 };
 
-export const buyBookPack = (state: GameState): GameState => {
+export const buyBookPack = (state: GameState, requestedPackCount = 1): GameState => {
   if (!state.campaign.unlockedSystems.library) {
     return state;
   }
 
-  if (state.money + 1e-9 < BASIC_BOOK_PACK_COST) {
+  const packCount = Math.max(1, Math.trunc(requestedPackCount));
+  const totalCost = BASIC_BOOK_PACK_COST * packCount;
+
+  if (state.money + 1e-9 < totalCost) {
     return state;
   }
 
   const next = cloneGameState(state);
   const pack: EquippedBook[] = [];
-  next.money -= BASIC_BOOK_PACK_COST;
+  next.money -= totalCost;
 
-  for (let index = 0; index < BASIC_BOOK_PACK_SIZE; index += 1) {
+  for (let index = 0; index < BASIC_BOOK_PACK_SIZE * packCount; index += 1) {
     const rarityRoll = nextRandom(next.rngSeed);
     next.rngSeed = rarityRoll.seed;
 
@@ -116,6 +150,7 @@ export const buyBookPack = (state: GameState): GameState => {
     pack.push(book);
   }
 
+  autoEquipBestBooksInPlace(next);
   next.recentBookPack = pack;
   return next;
 };
@@ -200,6 +235,7 @@ export const upgradeBook = (state: GameState, bookId: BookId, rarity: BookRarity
   next.books.owned[makeBookKey(bookId, rarity)] = ownedCount - BOOK_UPGRADE_COPY_COST;
   next.books.owned[makeBookKey(bookId, upgradedRarity)] =
     (next.books.owned[makeBookKey(bookId, upgradedRarity)] ?? 0) + 1;
+  autoEquipBestBooksForBuildingInPlace(next, bookById[bookId].buildingId);
 
   return next;
 };
@@ -212,7 +248,7 @@ export const canUpgradeBook = (state: GameState, bookId: BookId, rarity: BookRar
   return Boolean(
     nextRarity &&
       ownedCount >= BOOK_UPGRADE_COPY_COST &&
-      ownedCount - BOOK_UPGRADE_COPY_COST >= equippedCount,
+      ownedCount - BOOK_UPGRADE_COPY_COST >= Math.max(0, equippedCount - 1),
   );
 };
 
