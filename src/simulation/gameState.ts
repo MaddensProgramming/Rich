@@ -412,7 +412,10 @@ const normalizeExpeditionState = (value: unknown): ExpeditionState => {
   const fallback = createDefaultExpeditionState();
   const raw = isObject(value) ? value : {};
   const rawTroops = isObject(raw.troops) ? raw.troops : {};
-  const phase = raw.phase === 'invasion' || raw.phase === 'defeated' ? raw.phase : 'exploring';
+  const phase =
+    raw.phase === 'invasion' || raw.phase === 'defeated' || raw.phase === 'victorious'
+      ? raw.phase
+      : 'exploring';
   const rawBattle = isObject(raw.lastBattle) ? raw.lastBattle : null;
   const battleNodeId = rawBattle && typeof rawBattle.nodeId === 'string' ? rawBattle.nodeId : '';
   const rawCasualties = rawBattle && isObject(rawBattle.casualties) ? rawBattle.casualties : {};
@@ -440,7 +443,7 @@ const normalizeExpeditionState = (value: unknown): ExpeditionState => {
     relicSecured: Boolean(raw.relicSecured),
     experienceEarnedThisRun: Math.max(0, Math.trunc(asFiniteNumber(raw.experienceEarnedThisRun, 0))),
     lastBattle:
-      rawBattle && battleNodeId in expeditionNodeById
+      rawBattle && (battleNodeId in expeditionNodeById || battleNodeId === 'northern_host')
         ? {
             nodeId: battleNodeId,
             victory: Boolean(rawBattle.victory),

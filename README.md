@@ -44,7 +44,11 @@ GitHub Pages must be enabled in the repository settings with **Source** set to *
 - A successful raid grants $5,000, a large military stockpile, a legendary Weapon Contracts book, and the Crown of the Pass, which adds 25% army power for the rest of that run.
 - Only winning the Sonnenburg raid triggers the Northern Host invasion. Losing the raid does not start it.
 - The invasion advances over four real-time minutes. Offline Boost accelerates production but does not shorten the warning.
-- The first invasion is deliberately overwhelming. The player can prepare an evacuation caravan with food, wood, and tools, then leave early; if time expires, the town falls automatically.
+- The Northern Host is a real deterministic final battle with 2,200 power. A first-run victory is technically possible but requires roughly 93 Crown-boosted guards, making it wildly impractical without legacy progression.
+- A maximum Battle Wisdom legacy reduces the approximate requirement to 53 guards, making victory a demanding long-term objective rather than a scripted impossibility.
+- The player can inspect the exact final-stand result and casualties before committing, or prepare an evacuation caravan with food, wood, and tools and leave without fighting.
+- Losing the final stand ends the run in escape and still awards Experience. Winning leaves St. Moritz standing, awards $25,000 and 20 bonus Experience, and permanently ends that invasion.
+- If the invasion timer expires before either choice, the town falls automatically.
 
 ### Experience And New Settlements
 
@@ -195,6 +199,8 @@ Vitest covers the current campaign and economy behavior:
 - Battle previews match deterministic outcomes and map rewards cannot be collected twice.
 - Only a successful Sonnenburg raid starts the invasion and awards the unique treasure.
 - The invasion uses real seconds even during Offline Boost.
+- The final-stand preview exactly matches its casualties and outcome; first-run armies lose while a sufficiently developed legacy army can win.
+- Final-stand defeat, voluntary evacuation, timer defeat, and true victory each award their intended one-time outcomes.
 - Defeat awards Experience once, perks affect the next settlement, and the next-run reset preserves legacy progress.
 - Contract balance checks keep the finite queue at 10 requests and prevent money rewards from falling below market sell value unless book rewards offset part of the value.
 - The balance model keeps every project requirement line between 8% and 60% of total effort, with total effort rising each chapter, and includes per-recipe and book value production diagnostics.

@@ -217,7 +217,7 @@ export type ExperiencePerkId =
   | 'merchant_contacts'
   | 'battle_wisdom';
 
-export type ExpeditionPhase = 'exploring' | 'invasion' | 'defeated';
+export type ExpeditionPhase = 'exploring' | 'invasion' | 'defeated' | 'victorious';
 
 export interface BattleReport {
   nodeId: string;

@@ -3,6 +3,9 @@ import {
   BARRACKS_CONSTRUCTION_COST,
   EVACUATION_COST,
   INVASION_DURATION_SECONDS,
+  NORTHERN_HOST_POWER,
+  NORTHERN_HOST_REWARD_EXPERIENCE,
+  NORTHERN_HOST_REWARD_MONEY,
   expeditionNodes,
 } from '../data/expedition';
 import {
@@ -12,8 +15,10 @@ import {
   constructBarracks,
   createInitialGameState,
   evacuateTown,
+  defendTown,
   getArmyPower,
   getBattlePreview,
+  getInvasionBattlePreview,
   hydrateGameState,
   advanceWallClockState,
   prepareEvacuation,
@@ -125,6 +130,67 @@ describe('post-campaign expedition', () => {
     const next = tickGame(state, 10);
     expect(next.stats.gameSpeed).toBe(5);
     expect(next.expedition.invasionSecondsRemaining).toBe(90);
+  });
+
+  it('makes the first-run final battle technically possible but wildly impractical', () => {
+    const state = buildBarracks();
+    state.expedition.phase = 'invasion';
+    state.expedition.relicSecured = true;
+    state.expedition.troops = { militia: 0, archer: 0, guard: 40 };
+
+    const firstRunPreview = getInvasionBattlePreview(state);
+    expect(firstRunPreview.enemyPower).toBe(NORTHERN_HOST_POWER);
+    expect(firstRunPreview.victory).toBe(false);
+
+    state.legacy.perks.battle_wisdom = 5;
+    state.expedition.troops.guard = 60;
+    expect(getInvasionBattlePreview(state).victory).toBe(true);
+  });
+
+  it('resolves a failed final stand into escape and Experience without removing evacuation choice', () => {
+    let state = buildBarracks();
+    state.expedition.phase = 'invasion';
+    state.expedition.relicSecured = true;
+    state.expedition.troops = { militia: 5, archer: 3, guard: 2 };
+    state.resources.food = 1_000;
+    state.resources.wood = 1_000;
+    state.resources.tools = 1_000;
+    state = prepareEvacuation(state);
+    const preview = getInvasionBattlePreview(state);
+
+    const result = defendTown(state);
+    expect(preview.victory).toBe(false);
+    expect(result.expedition.phase).toBe('defeated');
+    expect(result.expedition.lastBattle?.nodeId).toBe('northern_host');
+    expect(result.expedition.lastBattle?.casualties).toEqual(preview.casualties);
+    expect(result.expedition.experienceEarnedThisRun).toBeGreaterThan(0);
+    expect(defendTown(result)).toBe(result);
+  });
+
+  it('grants the true-victory reward when a legacy-powered army defeats the Host', () => {
+    const state = buildBarracks();
+    state.expedition.phase = 'invasion';
+    state.expedition.relicSecured = true;
+    state.expedition.defeatedNodeIds = expeditionNodes.map((node) => node.id);
+    state.expedition.troops = { militia: 0, archer: 0, guard: 60 };
+    state.legacy.perks.battle_wisdom = 5;
+    const moneyBefore = state.money;
+    const experienceBefore = state.legacy.experiencePoints;
+
+    const result = defendTown(state);
+    expect(result.expedition.phase).toBe('victorious');
+    expect(result.money).toBe(moneyBefore + NORTHERN_HOST_REWARD_MONEY);
+    expect(result.legacy.experiencePoints).toBeGreaterThanOrEqual(
+      experienceBefore + NORTHERN_HOST_REWARD_EXPERIENCE,
+    );
+    expect(defendTown(result)).toBe(result);
+
+    const reloaded = hydrateGameState(JSON.parse(JSON.stringify(result)), 0);
+    expect(reloaded.expedition.phase).toBe('victorious');
+    expect(reloaded.expedition.lastBattle?.nodeId).toBe('northern_host');
+    const nextRun = startNextRun(reloaded, 20_000);
+    expect(nextRun.legacy.runNumber).toBe(2);
+    expect(nextRun.expedition.phase).toBe('exploring');
   });
 
   it('continues the point-of-no-return countdown while backgrounded or closed', () => {

@@ -416,6 +416,17 @@ p {
 .danger-button:hover:not(:disabled) { color: white; border-color: #5f2119; background: #8f3a29; }
 .battle-report-card > strong { color: var(--forest-dark); }
 .evacuation-card { border: 2px solid #ad4c33; background: #fff4e9; }
+.final-stand-card { border: 2px solid #8d392b; background: #fff9ee; }
+.final-stand-card.stand-ready { border-color: #b0802f; background: #fff8d9; }
+.host-reward { border-color: #d0a24c; background: #fff4ce; }
+.invasion-victory-card {
+  border: 2px solid #b8892f;
+  background: linear-gradient(145deg, #fff8d9, #edf6df);
+}
+.invasion-victory-card > h3 { color: #735014; font-size: 1.05rem; }
+.victory-perks { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
+.victory-perks button { min-height: 34px; font-size: .68rem; }
+.invasion-victory-card > small { color: var(--muted); font-size: .68rem; text-align: center; }
 
 .invasion-banner {
   position: sticky;

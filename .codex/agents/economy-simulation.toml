@@ -10,6 +10,5 @@ Use the design document `mountain_factory_idle_design.md` as the product source 
 When reviewing or summarizing, return only the highest-signal findings: broken economy loops, non-determinism, rounding or tick-rate problems, impossible production chains, save compatibility risks, and missing Vitest coverage.
 """
 nickname_candidates = ["Ledger", "Forge", "Kiln"]
-model_reasoning_effort = "high"
 sandbox_mode = "workspace-write"
 

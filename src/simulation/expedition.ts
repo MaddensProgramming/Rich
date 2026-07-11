@@ -3,6 +3,9 @@ import {
   EVACUATION_COST,
   INVASION_DURATION_SECONDS,
   MAX_EXPERIENCE_PERK_LEVEL,
+  NORTHERN_HOST_POWER,
+  NORTHERN_HOST_REWARD_EXPERIENCE,
+  NORTHERN_HOST_REWARD_MONEY,
   expeditionNodeById,
   expeditionNodes,
   troopById,
@@ -28,6 +31,8 @@ export interface BattlePreview extends BattleReport {
   alreadyDefeated: boolean;
   reason: string | null;
 }
+
+export type InvasionBattlePreview = BattleReport;
 
 const troopIds: TroopId[] = ['militia', 'archer', 'guard'];
 
@@ -242,6 +247,18 @@ const getRunExperienceReward = (state: GameState) =>
   (state.expedition.relicSecured ? 4 : 0) +
   (state.expedition.evacuationPrepared ? 3 : 0);
 
+export const getInvasionBattlePreview = (state: GameState): InvasionBattlePreview => {
+  const armyPower = getArmyPower(state);
+  const victory = armyPower >= NORTHERN_HOST_POWER;
+  return {
+    nodeId: 'northern_host',
+    victory,
+    armyPower,
+    enemyPower: NORTHERN_HOST_POWER,
+    casualties: getCasualtyCounts(state, NORTHERN_HOST_POWER, armyPower, victory),
+  };
+};
+
 const finishExpeditionInPlace = (state: GameState) => {
   if (state.expedition.phase === 'defeated') {
     return;
@@ -252,6 +269,39 @@ const finishExpeditionInPlace = (state: GameState) => {
   state.expedition.experienceEarnedThisRun = reward;
   state.legacy.experiencePoints += reward;
   state.legacy.totalExperienceEarned += reward;
+};
+
+export const defendTown = (state: GameState): GameState => {
+  if (state.expedition.phase !== 'invasion') {
+    return state;
+  }
+
+  const preview = getInvasionBattlePreview(state);
+  const next = cloneGameState(state);
+  for (const troopId of troopIds) {
+    next.expedition.troops[troopId] = Math.max(
+      0,
+      next.expedition.troops[troopId] - preview.casualties[troopId],
+    );
+  }
+  next.expedition.lastBattle = {
+    ...preview,
+    casualties: { ...preview.casualties },
+  };
+
+  if (!preview.victory) {
+    finishExpeditionInPlace(next);
+    return next;
+  }
+
+  const experienceReward = getRunExperienceReward(next) + NORTHERN_HOST_REWARD_EXPERIENCE;
+  next.expedition.phase = 'victorious';
+  next.expedition.invasionSecondsRemaining = 0;
+  next.expedition.experienceEarnedThisRun = experienceReward;
+  next.money += NORTHERN_HOST_REWARD_MONEY;
+  next.legacy.experiencePoints += experienceReward;
+  next.legacy.totalExperienceEarned += experienceReward;
+  return next;
 };
 
 export const evacuateTown = (state: GameState): GameState => {
@@ -283,7 +333,7 @@ export const buyExperiencePerk = (state: GameState, perkId: ExperiencePerkId): G
   const level = state.legacy.perks[perkId];
   const cost = getExperiencePerkUpgradeCost(state, perkId);
   if (
-    state.expedition.phase !== 'defeated' ||
+    (state.expedition.phase !== 'defeated' && state.expedition.phase !== 'victorious') ||
     level >= MAX_EXPERIENCE_PERK_LEVEL ||
     state.legacy.experiencePoints < cost
   ) {
@@ -296,7 +346,7 @@ export const buyExperiencePerk = (state: GameState, perkId: ExperiencePerkId): G
 };
 
 export const startNextRun = (state: GameState, now = Date.now()): GameState => {
-  if (state.expedition.phase !== 'defeated') {
+  if (state.expedition.phase !== 'defeated' && state.expedition.phase !== 'victorious') {
     return state;
   }
   const legacy = {

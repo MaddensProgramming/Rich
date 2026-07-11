@@ -3,6 +3,8 @@ import {
   BARRACKS_CONSTRUCTION_COST,
   EVACUATION_COST,
   INVASION_DURATION_SECONDS,
+  NORTHERN_HOST_REWARD_EXPERIENCE,
+  NORTHERN_HOST_REWARD_MONEY,
   expeditionNodeById,
   expeditionNodes,
   experiencePerks,
@@ -15,6 +17,7 @@ import {
   getArmyPower,
   getBattlePreview,
   getExperiencePerkUpgradeCost,
+  getInvasionBattlePreview,
   getUnassignedWorkerCount,
 } from '../simulation';
 import type { ResourceMap, TroopId } from '../simulation';
@@ -52,12 +55,14 @@ export function ExpeditionPanel({ game }: ExpeditionPanelProps) {
   );
   const [selectedNodeId, setSelectedNodeId] = useState(firstUncleared?.id ?? expeditionNodes[0].id);
   const [raidConfirmationOpen, setRaidConfirmationOpen] = useState(false);
+  const [finalStandConfirmationOpen, setFinalStandConfirmationOpen] = useState(false);
   const selectedNode = expeditionNodeById[selectedNodeId] ?? expeditionNodes[0];
   const preview = useMemo(
     () => getBattlePreview(game, selectedNode.id),
     [game, selectedNode.id],
   );
   const armyPower = getArmyPower(game);
+  const invasionPreview = getInvasionBattlePreview(game);
   const unassignedWorkers = getUnassignedWorkerCount(game);
   const invasionProgress =
     game.expedition.phase === 'invasion'
@@ -75,7 +80,7 @@ export function ExpeditionPanel({ game }: ExpeditionPanelProps) {
         <div className="invasion-banner" role="alert">
           <div>
             <span>The Northern Host is marching</span>
-            <strong>{formatTime(game.expedition.invasionSecondsRemaining)} until St. Moritz falls</strong>
+            <strong>{formatTime(game.expedition.invasionSecondsRemaining)} until the Host reaches St. Moritz</strong>
           </div>
           <div className="invasion-track" aria-label="Time before invasion">
             <span style={{ width: `${invasionProgress * 100}%` }} />
@@ -254,17 +259,45 @@ export function ExpeditionPanel({ game }: ExpeditionPanelProps) {
               <span>Latest battle</span>
               <strong>
                 {game.expedition.lastBattle.victory ? 'Victory at ' : 'Defeat at '}
-                {expeditionNodeById[game.expedition.lastBattle.nodeId]?.label}
+                {game.expedition.lastBattle.nodeId === 'northern_host'
+                  ? 'the Battle for St. Moritz'
+                  : expeditionNodeById[game.expedition.lastBattle.nodeId]?.label}
               </strong>
               <p>Casualties: {casualtyText(game.expedition.lastBattle.casualties)}.</p>
             </section>
           ) : null}
 
           {game.expedition.phase === 'invasion' ? (
+            <section className={`command-card final-stand-card ${invasionPreview.victory ? 'stand-ready' : ''}`}>
+              <span>Final battle</span>
+              <h3>The Northern Host</h3>
+              <p>
+                Your entire army can meet the invaders outside St. Moritz. A loss ends this settlement,
+                but its survivors still escape with the Experience earned this run.
+              </p>
+              <div className={`battle-forecast ${invasionPreview.victory ? 'forecast-win' : 'forecast-loss'}`}>
+                <span>Final-stand forecast</span>
+                <strong>{invasionPreview.victory ? 'A historic victory is possible' : 'Overwhelming defeat expected'}</strong>
+                <p>
+                  Your {invasionPreview.armyPower} power vs. {invasionPreview.enemyPower}. Expected losses: {casualtyText(invasionPreview.casualties)}.
+                </p>
+              </div>
+              <div className="battle-reward host-reward">
+                <span>Victory reward</span>
+                <strong>${formatNumber(NORTHERN_HOST_REWARD_MONEY, 0)} and +{NORTHERN_HOST_REWARD_EXPERIENCE} bonus Experience</strong>
+                <small>Victory ends the invasion permanently and leaves St. Moritz standing.</small>
+              </div>
+              <button type="button" className="danger-button" onClick={() => setFinalStandConfirmationOpen(true)}>
+                Make the final stand
+              </button>
+            </section>
+          ) : null}
+
+          {game.expedition.phase === 'invasion' ? (
             <section className="command-card evacuation-card">
-              <span>Final objective</span>
+              <span>Alternative</span>
               <h3>Prepare the evacuation</h3>
-              <p>The Northern Host cannot be defeated this run. Pack supplies and get the survivors clear.</p>
+              <p>Do not risk the final battle. Pack supplies and get the survivors clear before the Host arrives.</p>
               {!game.expedition.evacuationPrepared ? (
                 <>
                   <div className="command-cost">{formatCost(EVACUATION_COST)}</div>
@@ -283,6 +316,37 @@ export function ExpeditionPanel({ game }: ExpeditionPanelProps) {
               )}
             </section>
           ) : null}
+
+          {game.expedition.phase === 'victorious' ? (
+            <section className="command-card invasion-victory-card">
+              <span>True victory</span>
+              <h3>The Northern Host is broken</h3>
+              <p>
+                St. Moritz survived. The Host left ${formatNumber(NORTHERN_HOST_REWARD_MONEY, 0)} in captured pay chests,
+                and this run earned {game.expedition.experienceEarnedThisRun} Experience.
+              </p>
+              <div className="victory-perks">
+                {experiencePerks.map((perk) => {
+                  const level = game.legacy.perks[perk.id];
+                  const cost = getExperiencePerkUpgradeCost(game, perk.id);
+                  return (
+                    <button
+                      key={perk.id}
+                      type="button"
+                      onClick={() => game.buyExperiencePerk(perk.id)}
+                      disabled={level >= 5 || game.legacy.experiencePoints < cost}
+                    >
+                      {perk.label} {level}/5 · {cost} XP
+                    </button>
+                  );
+                })}
+              </div>
+              <button type="button" className="begin-run-button" onClick={game.startNextRun}>
+                Begin another settlement
+              </button>
+              <small>You may also return to town and continue this victorious settlement.</small>
+            </section>
+          ) : null}
         </aside>
       </div>
 
@@ -293,11 +357,34 @@ export function ExpeditionPanel({ game }: ExpeditionPanelProps) {
             <h2 id="raid-title">Raid Sonnenburg?</h2>
             <p>
               Victory takes Saint Verena’s war chest, $5,000, a legendary book, and the Crown of the Pass.
-              It also summons the Northern Host. The invasion begins immediately and cannot be stopped.
+              It also summons the Northern Host. The invasion begins immediately; only evacuation or an extraordinary military victory can end it.
             </p>
             <div className="dialog-actions">
               <button type="button" onClick={() => setRaidConfirmationOpen(false)}>Cancel</button>
               <button type="button" className="danger-button" onClick={attackSelected}>Begin the raid</button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {finalStandConfirmationOpen && game.expedition.phase === 'invasion' ? (
+        <div className="blocking-dialog-shell" role="dialog" aria-modal="true" aria-labelledby="stand-title">
+          <div className="blocking-dialog-card final-stand-dialog">
+            <span>{invasionPreview.victory ? 'Victory forecast' : 'Defeat forecast'}</span>
+            <h2 id="stand-title">Commit the army to a final stand?</h2>
+            <p>
+              The Northern Host has {invasionPreview.enemyPower} power against your {invasionPreview.armyPower}.
+              The result is deterministic: <strong>{invasionPreview.victory ? 'St. Moritz will win.' : 'St. Moritz will fall.'}</strong>
+              {game.expedition.evacuationPrepared
+                ? ' Your prepared caravan ensures the full evacuation bonus even if the defense fails.'
+                : ' If the defense fails, survivors escape without the prepared-caravan bonus.'}
+            </p>
+            <p>Expected casualties: {casualtyText(invasionPreview.casualties)}.</p>
+            <div className="dialog-actions">
+              <button type="button" onClick={() => setFinalStandConfirmationOpen(false)}>Wait and prepare</button>
+              <button type="button" className="danger-button" onClick={() => { game.defendTown(); setFinalStandConfirmationOpen(false); }}>
+                Fight the Northern Host
+              </button>
             </div>
           </div>
         </div>

@@ -10,6 +10,5 @@ Prefer read-heavy investigation and targeted tests. Treat browser time, tab susp
 When reviewing or summarizing, report concrete failure modes with reproduction steps or test cases. Avoid broad implementation work unless explicitly asked by the parent agent.
 """
 nickname_candidates = ["Checkpoint", "Archive", "Clock"]
-model_reasoning_effort = "high"
 sandbox_mode = "read-only"
 

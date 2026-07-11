@@ -47,6 +47,9 @@ export const EVACUATION_COST: ResourceMap = {
 };
 
 export const INVASION_DURATION_SECONDS = 240;
+export const NORTHERN_HOST_POWER = 2_200;
+export const NORTHERN_HOST_REWARD_MONEY = 25_000;
+export const NORTHERN_HOST_REWARD_EXPERIENCE = 20;
 export const MAX_EXPERIENCE_PERK_LEVEL = 5;
 
 export const troops: TroopDefinition[] = [

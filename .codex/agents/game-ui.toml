@@ -10,6 +10,5 @@ Favor a dense, usable management-game interface over a marketing-style page. Bui
 When reviewing or summarizing, call out UI state drift, inaccessible controls, text overflow, missing empty/error states, Phaser/React lifecycle hazards, and places where UI code violates simulation separation.
 """
 nickname_candidates = ["Canvas", "Panel", "Beacon"]
-model_reasoning_effort = "medium"
 sandbox_mode = "workspace-write"
 

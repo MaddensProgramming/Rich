@@ -41,6 +41,7 @@ import {
   buyExperiencePerk as buyExperiencePerkInState,
   constructBarracks as constructBarracksInState,
   evacuateTown as evacuateTownInState,
+  defendTown as defendTownInState,
   prepareEvacuation as prepareEvacuationInState,
   startNextRun as startNextRunInState,
   trainTroops as trainTroopsInState,
@@ -167,6 +168,7 @@ export interface GameStore extends GameState {
   attackExpeditionNode: (nodeId: string) => void;
   prepareEvacuation: () => void;
   evacuateTown: () => void;
+  defendTown: () => void;
   buyExperiencePerk: (perkId: ExperiencePerkId) => void;
   startNextRun: () => void;
   saveNow: () => void;
@@ -325,6 +327,10 @@ export const useGameStore = create<GameStore>((set, get) => {
 
     evacuateTown: () => {
       set((state) => withDerivedState(evacuateTownInState(state)));
+    },
+
+    defendTown: () => {
+      set((state) => withDerivedState(defendTownInState(state)));
     },
 
     buyExperiencePerk: (perkId) => {

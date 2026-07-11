@@ -203,6 +203,8 @@ export function App() {
               <p>{game.campaign.campaignComplete
                 ? game.expedition.phase === 'invasion'
                   ? 'The Northern Host is marching.'
+                  : game.expedition.phase === 'victorious'
+                    ? 'The Northern Host has been defeated.'
                   : game.expedition.phase === 'defeated'
                     ? 'The town has fallen. Spend Experience.'
                     : 'The mountain campaign is open.'
