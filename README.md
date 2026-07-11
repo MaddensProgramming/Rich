@@ -25,15 +25,17 @@ GitHub Pages must be enabled in the repository settings with **Source** set to *
 - The first upgrade project is **Upgrade to Hamlet**, which requires delivering 40 wood and 35 stone.
 - Upgrade projects use strict per-resource requirements: each project lists the exact amounts of resources (and sometimes money) that must be delivered. Deliveries are clamped so the player can never over-deliver, and the project advances only when every line is fully met.
 - Filling a project does not auto-advance the chapter. The player chooses when to advance.
-- Hamlet, Village, Mountain Town, and the Great Hall project are defined in data for the campaign path.
+- Hamlet, Village, Mountain Town, and the Great Hall project are defined in data for the campaign path. The Hamlet-to-Village milestone requires 160 wood, 160 stone, 53 food, and 80 coal.
 - Requirements are tuned with the worker-second effort model in `src/simulation/balance.ts`, which keeps every requirement line meaningful (between 8% and 60% of a project's total effort), keeps total effort rising each chapter, and reports strong or weak recipe and book value production.
+- A deterministic baseline-player simulator runs the real construction, hiring, trading, production, food, contracts, library books, offline boost, and project-delivery rules at configurable decision intervals. It reports chapter duration, the last requirement completed, inherited stockpiles, systems used, and model-versus-playtest timing drift.
 - Campaign state is owned by the simulation layer and saved with the rest of the game.
 
 ### Beyond the Pass
 
 - Completing the Great Hall unlocks Act II and a switchable mountain map while the original town remains available for production.
 - A dedicated Barracks can be constructed for 100 wood, 80 stone, and 20 tools.
-- Unassigned workers can enlist as militia, archers, or guards. Training consumes food, money, and the appropriate tools, bows, swords, or iron bars.
+- Unassigned workers can enlist as militia, archers, or guards. Military equipment is now a major production commitment: militia cost 30 food, 6 tools, and $50; archers cost 40 food, 4 bows, 2 tools, and $100; guards cost 60 food, 4 swords, 8 iron bars, 2 tools, and $200.
+- Enlisted troops remain part of the population used to price new worker hires. Turning townspeople into soldiers therefore no longer lowers the worker price and cannot be used to refill the town cheaply.
 - The map contains 12 branching locations. Securing prerequisite locations opens deeper routes and grants one-time resources and money.
 - Battles are deterministic: the UI shows exact army power, enemy power, the expected result, and expected casualties before the player commits.
 - Losing a map battle costs troops but does not end the run; the location can be attempted again after rebuilding.
@@ -46,6 +48,7 @@ GitHub Pages must be enabled in the repository settings with **Source** set to *
 - The invasion advances over four real-time minutes. Offline Boost accelerates production but does not shorten the warning.
 - The Northern Host is a real deterministic final battle with 2,200 power. A first-run victory is technically possible but requires roughly 93 Crown-boosted guards, making it wildly impractical without legacy progression.
 - A maximum Battle Wisdom legacy reduces the approximate requirement to 53 guards, making victory a demanding long-term objective rather than a scripted impossibility.
+- Equipping the roughly 93 Crown-boosted guards needed for a first-run victory now costs about 5,580 food, 372 swords, 744 iron bars, 186 tools, and $18,600 before replacing campaign casualties.
 - The player can inspect the exact final-stand result and casualties before committing, or prepare an evacuation caravan with food, wood, and tools and leave without fighting.
 - Losing the final stand ends the run in escape and still awards Experience. Winning leaves St. Moritz standing, awards $25,000 and 20 bonus Experience, and permanently ends that invasion.
 - If the invasion timer expires before either choice, the town falls automatically.
@@ -129,6 +132,7 @@ Money is tracked separately from physical resources. Resource definitions includ
 - Selling lowers market pressure and prices.
 - Market pressure drifts back toward normal over time.
 - Optional auto-buy and auto-sell rules can be configured per resource once market access is unlocked.
+- The progression optimizer reports repeatable batch sell/buy profit separately. With the current pre-impact batch pricing, a sufficiently large sale followed by a matching purchase can return the same stock at a profit; this is treated as a balance warning, not silently counted as ordinary production.
 
 ### Library And Books
 
@@ -195,7 +199,7 @@ Vitest covers the current campaign and economy behavior:
 - Storyteller seen-chapter and victory tracking survive save/load.
 - Library pack batches, automatic best-book equipment, upgrade-all, and upgrade-all-possible promote duplicates correctly.
 - Contracts unlock by chapter, show up to two offers at a time, consume goods, and grant money and book rewards.
-- Barracks construction and troop training respect their gates and exact costs.
+- Barracks construction and troop training respect their gates and exact costs, and enlisted troops cannot reduce subsequent worker hire prices.
 - Battle previews match deterministic outcomes and map rewards cannot be collected twice.
 - Only a successful Sonnenburg raid starts the invasion and awards the unique treasure.
 - The invasion uses real seconds even during Offline Boost.
@@ -204,6 +208,10 @@ Vitest covers the current campaign and economy behavior:
 - Defeat awards Experience once, perks affect the next settlement, and the next-run reset preserves legacy progress.
 - Contract balance checks keep the finite queue at 10 requests and prevent money rewards from falling below market sell value unless book rewards offset part of the value.
 - The balance model keeps every project requirement line between 8% and 60% of total effort, with total effort rising each chapter, and includes per-recipe and book value production diagnostics.
+- The baseline progression simulator completes the campaign deterministically, records inherited stockpiles and bottlenecks, targets the observed 12/24/40-worker growth profile, and retains active-play timestamps for direct model-versus-playtest comparisons.
+- The goal planner recursively expands project, construction, housing, food, troop, and money needs through the live recipe graph, then assigns workers to reduce the longest projected production bottleneck.
+- The first-invasion simulator builds the Barracks, equips an army using current troop costs and power, clears all 12 map locations, and records the time Sonnenburg starts the invasion.
+- The policy optimizer searches check-in intervals, worker targets, book purchases, contract timing, production policies, and allowed market actions under a 60-actions-per-minute assumption. Regression coverage keeps the current-rules result below the 2,000-second playtest benchmark and explicitly verifies when that result depends on market round trips.
 
 Current test command:
 
@@ -237,11 +245,35 @@ Run tests:
 npm test
 ```
 
+Run the baseline progression simulation:
+
+```bash
+npm run simulate:progression
+```
+
+The default policy checks the town every 60 seconds, makes up to eight construction, hiring, housing, or building-upgrade investments, and performs 12 manual clearing actions while those pools remain. Its goal planner re-evaluates the current project, buildings, housing, food reserve, contracts, and money need on every check-in; expands finished goods into all recipe inputs; equips purchased books automatically; and reallocates recipes and workers toward the projected bottleneck. It targets 12 workers in Hamlet, 24 in Village, and 40 in Mountain Town, completes all 10 contracts before project delivery, and buys 5 deterministic book packs.
+
+The July 2026 active-play benchmark is Hamlet completed at 520 seconds with 12 workers, Village at 1,300 seconds with 24 workers, the Great Hall at 1,800 seconds with 40 workers, and the first invasion at 2,000 seconds. The baseline report displays those observed timestamps beside its own result; the current conservative 12/24/40 policy completes the Great Hall in about 52 minutes. It is useful as a stable comparison, not as a fastest-player estimate. Fresh runs begin with zero offline charge; earned charge can be supplied explicitly for comparison.
+
+Alternative check-in and manual-play assumptions can be compared without editing code:
+
+```bash
+npm run simulate:progression -- --interval=120 --manual-actions=6 --max-investments=4 --book-packs=3 --offline-charge=1200 --max-hours=8
+```
+
+Search for faster human-scale policies and simulate them through the first invasion:
+
+```bash
+npm run optimize:progression
+```
+
+The optimizer prints two leaderboards against the same live game data. The normal-economy search disables repeatable sell/buy round trips; its current best reaches the Great Hall at 31m40s and the invasion at 37m00s with 6/12/16 workers. The fastest current-rules search reaches the Great Hall at 28m20s and the invasion at 31m00s with 8/16/24 workers, 10 book packs, and two completed contracts. That sub-2,000-second result makes about $26,944 through repeatable batch market round trips, so it demonstrates a real balance exploit rather than a sustainable production pace. Both results are heuristic upper-quality player policies, not mathematical proofs of the global optimum.
+
 ## Architecture Notes
 
 Simulation logic is kept separate from React and Phaser.
 
-- `src/simulation/` contains deterministic game rules, campaign and expedition state, combat previews and results, invasion/Experience rules, save shape handling, tick logic, market math, books, workers, housing, food, offline boost behavior, and the worker-second balance model (`balance.ts`) used to tune project requirements.
+- `src/simulation/` contains deterministic game rules, campaign and expedition state, combat previews and results, invasion/Experience rules, save shape handling, tick logic, market math, books, workers, housing, food, offline boost behavior, the worker-second balance model (`balance.ts`), the baseline campaign simulator (`progressionSimulator.ts`), the recursive goal planner (`productionPlanner.ts`), the first-invasion simulator (`invasionSimulator.ts`), and the policy search (`policyOptimizer.ts`).
 - `src/data/` contains resource, building, recipe, book, chapter project, troop, map node, and Experience perk definitions.
 - `src/store/` connects the simulation layer to Zustand and browser storage.
 - `src/ui/` contains React panels, resource bars, contextual popups, and controls.

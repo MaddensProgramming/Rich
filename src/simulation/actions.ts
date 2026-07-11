@@ -26,7 +26,13 @@ export const getBuildingUpgradeCost = (state: GameState, buildingId: BuildingId)
   return buildingById[buildingId].upgradeCosts[nextLevel] ?? {};
 };
 
-export const getWorkerHireCost = (state: GameState) => 95 + state.workers.total * 30;
+export const getWorkerHireCost = (state: GameState) => {
+  const enlistedPopulation = Object.values(state.expedition.troops).reduce(
+    (total, quantity) => total + quantity,
+    0,
+  );
+  return 95 + (state.workers.total + enlistedPopulation) * 30;
+};
 
 export const getHousingUpgradeCost = (state: GameState): ResourceMap => {
   const step = Math.max(1, Math.floor((state.workers.housingCapacity - 8) / 4) + 1);

@@ -19,6 +19,8 @@ import {
   getArmyPower,
   getBattlePreview,
   getInvasionBattlePreview,
+  getWorkerHireCost,
+  hireWorker,
   hydrateGameState,
   advanceWallClockState,
   prepareEvacuation,
@@ -71,10 +73,33 @@ describe('post-campaign expedition', () => {
     state = trainTroops(state, 'archer', 2);
     expect(state.expedition.troops.archer).toBe(2);
     expect(state.workers.total).toBe(4);
-    expect(state.resources.food).toBe(950);
-    expect(state.resources.bows).toBe(8);
-    expect(state.money).toBe(930);
+    expect(state.resources.food).toBe(920);
+    expect(state.resources.bows).toBe(2);
+    expect(state.resources.tools).toBe(976);
+    expect(state.money).toBe(800);
     expect(trainTroops(state, 'archer', 1)).toBe(state);
+  });
+
+  it('keeps enlisted troops in the population used for worker hire prices', () => {
+    let state = buildBarracks();
+    state.workers.total = 6;
+    state.workers.housingCapacity = 8;
+    state.money = 10_000;
+    state.resources.food = 10_000;
+    state.resources.swords = 100;
+    state.resources.iron_bars = 100;
+
+    const costBeforeEnlisting = getWorkerHireCost(state);
+    state = trainTroops(state, 'guard', 1);
+
+    expect(state.workers.total).toBe(5);
+    expect(state.expedition.troops.guard).toBe(1);
+    expect(getWorkerHireCost(state)).toBe(costBeforeEnlisting);
+
+    const moneyBeforeHiring = state.money;
+    state = hireWorker(state);
+    expect(state.money).toBe(moneyBeforeHiring - costBeforeEnlisting);
+    expect(getWorkerHireCost(state)).toBe(costBeforeEnlisting + 30);
   });
 
   it('uses the deterministic preview for battle results and unlocks branches once', () => {
