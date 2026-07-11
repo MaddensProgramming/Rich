@@ -1,39 +1,10 @@
-# Codex Project Guidance
+# St. Moritz Project Guidance
 
-## Project
+Use `README.md` as the product and implementation source of truth.
 
-St. Moritz is a browser idle/management game. Use `README.md` as the current product and implementation reference.
+- Build for desktop browsers with React, Phaser, TypeScript, Vite, Zustand, and Vitest. Do not add mobile-specific work unless requested.
+- Keep game rules and serializable state in `src/simulation/`. React and Phaser should only display state and dispatch actions.
+- Run `npm test` and `npm run build` after relevant changes.
+- Update `README.md` when gameplay, architecture, setup, deployment, or testing behavior changes.
 
-Recommended stack:
-
-- Phaser for the town/game canvas.
-- React for UI panels and controls.
-- TypeScript for game and app logic.
-- Vite for local development.
-- Zustand or another lightweight store for shared state.
-- Vitest for simulation and economy tests.
-
-Target desktop browsers only. Do not spend effort optimizing the layout, touch ergonomics, or interaction model for mobile unless the user explicitly changes the project direction.
-
-Keep simulation logic separate from React and Phaser. UI code may display state and dispatch actions, but production rules, market math, food penalties, books, save/load shape, and offline boost behavior belong in the simulation layer.
-
-Keep `README.md` up to date whenever implemented gameplay, architecture, setup, deployment, or testing behavior changes.
-
-## Useful Subagents
-
-Custom project agents live in `.codex/agents/`.
-
-Use subagents only when the task benefits from parallel or specialized work:
-
-- `economy-simulation`: simulation rules, economy balance, deterministic tick logic, data definitions, and economy tests.
-- `game-ui`: React/Phaser UI, layout, player controls, visual state, and frontend integration.
-- `persistence-qa`: read-only review of save/load, offline progress, browser time edge cases, and storage migrations.
-- `code-reviewer`: read-only implementation review focused on correctness, architecture boundaries, maintainability, and missing tests.
-
-Good prompts:
-
-- "Spawn `economy-simulation` and `game-ui` in parallel to inspect the plan, then summarize conflicts before implementing."
-- "Use `persistence-qa` to review the save/offline implementation and wait for its findings."
-- "After implementation, run `code-reviewer` and summarize only material issues."
-
-Avoid spawning subagents for small single-file edits. Prefer read-heavy or review-heavy delegation first, and keep write-heavy work coordinated through the parent agent. Be patient when waiting for subagents to finish their work.
+Custom agents live in `.codex/agents/`: `economy-simulation` and `game-ui` can implement focused changes; `persistence-qa` and `code-reviewer` are read-only reviewers. Delegate only when specialization or parallel review is useful, and keep overlapping write work with the parent agent.
