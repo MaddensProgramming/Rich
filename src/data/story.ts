@@ -63,13 +63,13 @@ export const storySegments: StorySegment[] = [
   {
     id: 'victory',
     speaker: storyteller.name,
-    title: 'The Great Hall Stands',
+    title: 'Beyond the Great Hall',
     lines: [
       'There. The Great Hall stands, and I have shouted at it twice. It did not fall down. Excellent sign.',
-      'You came with bare hands and a dangerous willingness to follow instructions from an old man near a fireplace.',
-      'Rest if you must, or keep building. St. Moritz is yours now, though I have hidden several important nails.',
+      'But a hall this tall can see beyond the pass. The roads are thick with bandits, deserters, and towns richer than good sense permits.',
+      'Build a Barracks and take the mountain roads. One warning: Sonnenburg keeps a magnificent crown, and an army that will come looking for it.',
     ],
-    goal: 'Campaign complete. Keep playing freely, and do not trust any nail that looks too pleased.',
+    goal: 'Open the mountain map, construct the Barracks, and begin the expedition campaign.',
   },
 ];
 

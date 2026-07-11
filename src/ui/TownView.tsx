@@ -110,6 +110,11 @@ const formatCostSummary = (cost: ResourceMap, game: GameStore) => {
 };
 
 const toSnapshot = (game: GameStore, selectedHotspotId: string | null, inputLocked: boolean): TownSnapshot => {
+  const assignedWorkers = game.definitions.buildings.reduce(
+    (total, definition) => total + game.buildings[definition.id].workers,
+    0,
+  );
+  const idleWorkers = game.workers.total - assignedWorkers;
   const gatherables = game.campaign.unlockedSystems.manualGather
     ? [
         ...createGatherableSnapshot('wood', 'Wood', game.campaign.clearingWood, INITIAL_CLEARING_WOOD),
@@ -158,6 +163,9 @@ const toSnapshot = (game: GameStore, selectedHotspotId: string | null, inputLock
         blocked,
         selected: selectedHotspotId === buildingId,
         buildingId,
+        workers: building.workers,
+        canAddWorker: constructed && idleWorkers > 0,
+        canRemoveWorker: constructed && building.workers > 0,
       };
     }
 
@@ -229,12 +237,18 @@ export function TownView({ game, selectedHotspotId, inputLocked, onSelectHotspot
       return undefined;
     }
 
+    const onAssignWorkers = (buildingId: BuildingId, workerCount: number) => {
+      game.assignWorkers(buildingId, workerCount);
+    };
+
     phaserGame.events.on('town:hotspot-select', onSelectHotspot);
     phaserGame.events.on('town:gather-resource', onGatherResource);
+    phaserGame.events.on('town:assign-workers', onAssignWorkers);
 
     return () => {
       phaserGame.events.off('town:hotspot-select', onSelectHotspot);
       phaserGame.events.off('town:gather-resource', onGatherResource);
+      phaserGame.events.off('town:assign-workers', onAssignWorkers);
     };
   }, [onGatherResource, onSelectHotspot]);
 

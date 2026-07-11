@@ -9,11 +9,13 @@ import { TownView } from './TownView';
 import type { TownHotspotSelection } from './townHotspots';
 import type { TownGatherableSnapshot } from '../game/scenes/TownScene';
 import { formatNumber } from './format';
+import { ExpeditionPanel } from './ExpeditionPanel';
 
 export function App() {
   const game = useGameStore();
   const [activeHotspot, setActiveHotspot] = useState<TownHotspotSelection | null>(null);
   const [activeHotspotVersion, setActiveHotspotVersion] = useState(0);
+  const [activeView, setActiveView] = useState<'town' | 'map'>('town');
   const townInputBlockedUntilRef = useRef(0);
 
   const campaign = useMemo(() => readCampaignDisplay(game), [game]);
@@ -27,6 +29,20 @@ export function App() {
       : game.campaign.chapterId;
 
   const activeStorySegment = storyOverride ?? autoStorySegment;
+
+  useEffect(() => {
+    if (game.campaign.campaignComplete) {
+      setActiveView('map');
+      setActiveHotspot(null);
+    }
+  }, [game.campaign.campaignComplete]);
+
+  useEffect(() => {
+    if (game.expedition.phase === 'defeated') {
+      setActiveView('map');
+      setActiveHotspot(null);
+    }
+  }, [game.expedition.phase]);
 
   const dismissStory = useCallback(() => {
     if (autoStorySegment) {
@@ -145,6 +161,10 @@ export function App() {
                 {game.offline.active ? `${OFFLINE_BOOST_MULTIPLIER}x` : `${game.stats.gameSpeed.toFixed(1)}x`}
               </strong>
             </div>
+            <div className={game.legacy.experiencePoints > 0 ? 'metric-boost' : ''}>
+              <span>Run · XP</span>
+              <strong>{game.legacy.runNumber} · {game.legacy.experiencePoints}</strong>
+            </div>
           </div>
         </header>
 
@@ -153,32 +173,40 @@ export function App() {
 
           <section className="campaign-strip" aria-label="Campaign progress">
             <div className="campaign-copy">
-              <span>{campaign.chapterLabel}</span>
-              <strong>{campaign.projectLabel}</strong>
-              <p>{campaign.unlockLabel}</p>
+              <span>{game.campaign.campaignComplete ? 'Act II' : campaign.chapterLabel}</span>
+              <strong>{game.campaign.campaignComplete ? 'Beyond the Pass' : campaign.projectLabel}</strong>
+              <p>{game.campaign.campaignComplete ? 'Build a Barracks, secure the map, and choose when to raid Sonnenburg.' : campaign.unlockLabel}</p>
               <button className="story-reopen" type="button" onClick={openStory}>
                 Storyteller
               </button>
+              {game.campaign.campaignComplete ? (
+                <div className="view-switcher" aria-label="Choose view">
+                  <button type="button" className={activeView === 'town' ? 'active' : ''} onClick={() => setActiveView('town')}>Town</button>
+                  <button type="button" className={activeView === 'map' ? 'active' : ''} onClick={() => { setActiveHotspot(null); setActiveView('map'); }}>Map</button>
+                </div>
+              ) : null}
             </div>
             <button
               className="campaign-progress campaign-button"
               type="button"
-              onClick={() =>
-                selectHotspot({
-                  id: 'project',
-                  kind: 'project',
-                  label: 'Town Project',
-                })
-              }
+              onClick={() => game.campaign.campaignComplete
+                ? setActiveView('map')
+                : selectHotspot({ id: 'project', kind: 'project', label: 'Town Project' })}
             >
               <div className="boost-topline">
-                <span>Project progress</span>
-                <strong>{campaign.progressLabel}</strong>
+                <span>{game.campaign.campaignComplete ? 'Map secured' : 'Project progress'}</span>
+                <strong>{game.campaign.campaignComplete ? `${game.expedition.defeatedNodeIds.length} / 12` : campaign.progressLabel}</strong>
               </div>
               <div className="boost-bar campaign-progress-bar" aria-label="Chapter progress">
-                <span style={{ width: `${(campaign.progressRatio ?? 0) * 100}%` }} />
+                <span style={{ width: `${game.campaign.campaignComplete ? game.expedition.defeatedNodeIds.length / 12 * 100 : (campaign.progressRatio ?? 0) * 100}%` }} />
               </div>
-              <p>{campaign.statusLabel}</p>
+              <p>{game.campaign.campaignComplete
+                ? game.expedition.phase === 'invasion'
+                  ? 'The Northern Host is marching.'
+                  : game.expedition.phase === 'defeated'
+                    ? 'The town has fallen. Spend Experience.'
+                    : 'The mountain campaign is open.'
+                : campaign.statusLabel}</p>
             </button>
             <div className="campaign-selection">
               <span>Selection</span>
@@ -189,8 +217,17 @@ export function App() {
         </div>
       </section>
 
+      {game.campaign.campaignComplete && game.expedition.phase === 'invasion' && activeView === 'town' ? (
+        <button type="button" className="town-invasion-warning" onClick={() => setActiveView('map')}>
+          <span>The Northern Host is approaching</span>
+          <strong>{Math.ceil(game.expedition.invasionSecondsRemaining)} seconds remain · Return to map</strong>
+        </button>
+      ) : null}
+
       <main className="main-stage">
-        <section
+        {activeView === 'map' && game.campaign.campaignComplete ? (
+          <ExpeditionPanel game={game} />
+        ) : <section
           className={activeHotspot ? 'town-section town-stage popup-open' : 'town-section town-stage'}
           aria-label="Town view"
         >
@@ -211,7 +248,7 @@ export function App() {
               onOpenHotspot={openHotspotFromPopup}
             />
           ) : null}
-        </section>
+        </section>}
       </main>
 
       {activeStorySegment ? (

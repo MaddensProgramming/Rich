@@ -2,6 +2,7 @@ export * from './actions';
 export * from './balance';
 export * from './books';
 export * from './contracts';
+export * from './expedition';
 export * from './gameState';
 export * from './market';
 export * from './tick';

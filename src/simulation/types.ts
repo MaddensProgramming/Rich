@@ -209,6 +209,43 @@ export interface OfflineState {
   active: boolean;
 }
 
+export type TroopId = 'militia' | 'archer' | 'guard';
+
+export type ExperiencePerkId =
+  | 'pioneering_spirit'
+  | 'prepared_stores'
+  | 'merchant_contacts'
+  | 'battle_wisdom';
+
+export type ExpeditionPhase = 'exploring' | 'invasion' | 'defeated';
+
+export interface BattleReport {
+  nodeId: string;
+  victory: boolean;
+  armyPower: number;
+  enemyPower: number;
+  casualties: Record<TroopId, number>;
+}
+
+export interface ExpeditionState {
+  phase: ExpeditionPhase;
+  barracksConstructed: boolean;
+  troops: Record<TroopId, number>;
+  defeatedNodeIds: string[];
+  invasionSecondsRemaining: number;
+  evacuationPrepared: boolean;
+  relicSecured: boolean;
+  experienceEarnedThisRun: number;
+  lastBattle: BattleReport | null;
+}
+
+export interface LegacyState {
+  runNumber: number;
+  experiencePoints: number;
+  totalExperienceEarned: number;
+  perks: Record<ExperiencePerkId, number>;
+}
+
 export interface SimulationStats {
   productionPerSecond: ResourceMap;
   consumptionPerSecond: ResourceMap;
@@ -240,6 +277,8 @@ export interface GameState {
     owned: Partial<Record<BookKey, number>>;
   };
   campaign: CampaignState;
+  expedition: ExpeditionState;
+  legacy: LegacyState;
   offline: OfflineState;
   stats: SimulationStats;
   recentBookPack: EquippedBook[];

@@ -1,8 +1,8 @@
 # St. Moritz
 
-St. Moritz is a browser idle and management game about rebuilding a mountain settlement through finite campaign chapters.
+St. Moritz is a browser idle and management game about rebuilding a mountain settlement, campaigning beyond the pass, and carrying hard-won Experience into faster future settlements.
 
-St. Moritz is a finite, chapter-based browser management game. It uses Vite, React, TypeScript, Phaser, Zustand, and Vitest. The game runs entirely in the browser and saves progress to `localStorage`.
+The game combines a finite chapter-based town campaign with a repeatable expedition and legacy loop. It uses Vite, React, TypeScript, Phaser, Zustand, and Vitest, runs entirely in the browser, and saves progress to `localStorage`.
 
 The project currently targets desktop browsers only. Mobile layout and touch-first ergonomics are not a product focus.
 
@@ -28,6 +28,31 @@ GitHub Pages must be enabled in the repository settings with **Source** set to *
 - Hamlet, Village, Mountain Town, and the Great Hall project are defined in data for the campaign path.
 - Requirements are tuned with the worker-second effort model in `src/simulation/balance.ts`, which keeps every requirement line meaningful (between 8% and 60% of a project's total effort), keeps total effort rising each chapter, and reports strong or weak recipe and book value production.
 - Campaign state is owned by the simulation layer and saved with the rest of the game.
+
+### Beyond the Pass
+
+- Completing the Great Hall unlocks Act II and a switchable mountain map while the original town remains available for production.
+- A dedicated Barracks can be constructed for 100 wood, 80 stone, and 20 tools.
+- Unassigned workers can enlist as militia, archers, or guards. Training consumes food, money, and the appropriate tools, bows, swords, or iron bars.
+- The map contains 12 branching locations. Securing prerequisite locations opens deeper routes and grants one-time resources and money.
+- Battles are deterministic: the UI shows exact army power, enemy power, the expected result, and expected casualties before the player commits.
+- Losing a map battle costs troops but does not end the run; the location can be attempted again after rebuilding.
+
+### Sonnenburg Raid And Invasion
+
+- Sonnenburg is the final map location and is explicitly presented as a point of no return.
+- A successful raid grants $5,000, a large military stockpile, a legendary Weapon Contracts book, and the Crown of the Pass, which adds 25% army power for the rest of that run.
+- Only winning the Sonnenburg raid triggers the Northern Host invasion. Losing the raid does not start it.
+- The invasion advances over four real-time minutes. Offline Boost accelerates production but does not shorten the warning.
+- The first invasion is deliberately overwhelming. The player can prepare an evacuation caravan with food, wood, and tools, then leave early; if time expires, the town falls automatically.
+
+### Experience And New Settlements
+
+- Defeat awards Experience based on map progress, securing the Crown, and preparing the evacuation.
+- Experience is never awarded twice for the same run and can be saved or spent before beginning the next settlement.
+- Four permanent perks have five levels each: Pioneering Spirit adds starting workers, Prepared Stores adds starting supplies, Merchant Contacts adds starting money, and Battle Wisdom increases army power.
+- Beginning another settlement resets the town, campaign, Barracks, army, and map while preserving Experience, perk levels, total Experience, and run number.
+- The normal hard-reset control still erases all progress, including the legacy.
 
 ### Manual Gathering And Construction
 
@@ -117,7 +142,7 @@ Money is tracked separately from physical resources. Resource definitions includ
 
 - Elder Bertram, a painted town chronicler, narrates each chapter and the final victory.
 - His dialogue introduces the new stage and states the current upgrade goal.
-- The storyteller opens automatically on a new chapter and on campaign completion, and can be reopened from the campaign strip.
+- The storyteller opens automatically on a new chapter and when the Great Hall reveals the mountain campaign, and can be reopened from the campaign strip.
 - Seen chapters and the victory message are tracked in saved campaign state so intros are not repeated.
 
 ### Contracts
@@ -130,12 +155,13 @@ Money is tracked separately from physical resources. Resource definitions includ
 
 ### Save, Load, And Offline Boost
 
-- The game saves to browser `localStorage` under `st-moritz-save-v2`.
-- The previous `mountain-factory-idle-save-v1` key is still read as a legacy fallback.
+- The game saves to browser `localStorage` under `st-moritz-save-v3`.
+- The previous `st-moritz-save-v2` and `mountain-factory-idle-save-v1` keys are still read as migration fallbacks.
 - Save loading sanitizes invalid or outdated data into the current save shape.
-- Saves include campaign state, resources, money, workers, housing, buildings, recipes, market state, books, offline charge, and timestamps.
+- Saves include campaign, expedition, invasion, Experience, resources, money, workers, housing, buildings, recipes, market, books, offline charge, and timestamps.
 - Offline boost is locked in Arrival and unlocks after the settlement reaches Hamlet.
 - Closing or pausing the game earns offline charge only after offline boost is unlocked.
+- Once Sonnenburg has been raided, elapsed wall time also advances the invasion across background tabs and reloads.
 
 ### UI
 
@@ -144,7 +170,7 @@ Money is tracked separately from physical resources. Resource definitions includ
 - The town image is now the main interaction layer, with generated stage-specific backdrops for Arrival, Hamlet, Village, and Mountain Town.
 - Clicking a hotspot opens one contextual popup at a time. Clicking wood, stone, or berry props gathers directly without opening a popup.
 - Escape or the close button dismisses the popup.
-- Building cards and building popups include + and - worker buttons for direct assignment.
+- Translucent building labels on the town image, building cards, and building popups include + and - worker buttons for direct assignment.
 - The top bar keeps critical status visible.
 - The project strip shows the current chapter, project progress, and selected hotspot.
 
@@ -158,12 +184,18 @@ Vitest covers the current campaign and economy behavior:
 - Arrival project delivery does not auto-advance the chapter.
 - Resource and money deliveries are clamped so a project can never be over-delivered.
 - Save/load preserves campaign state.
+- Save/load preserves the Barracks, army, map, invasion, evacuation, and permanent Experience state.
 - Legacy saves migrate into a valid chapter state.
 - Hamlet food production works after construction.
 - Market and library actions respect chapter locks.
 - Storyteller seen-chapter and victory tracking survive save/load.
 - Library pack batches, automatic best-book equipment, upgrade-all, and upgrade-all-possible promote duplicates correctly.
 - Contracts unlock by chapter, show up to two offers at a time, consume goods, and grant money and book rewards.
+- Barracks construction and troop training respect their gates and exact costs.
+- Battle previews match deterministic outcomes and map rewards cannot be collected twice.
+- Only a successful Sonnenburg raid starts the invasion and awards the unique treasure.
+- The invasion uses real seconds even during Offline Boost.
+- Defeat awards Experience once, perks affect the next settlement, and the next-run reset preserves legacy progress.
 - Contract balance checks keep the finite queue at 10 requests and prevent money rewards from falling below market sell value unless book rewards offset part of the value.
 - The balance model keeps every project requirement line between 8% and 60% of total effort, with total effort rising each chapter, and includes per-recipe and book value production diagnostics.
 
@@ -203,8 +235,8 @@ npm test
 
 Simulation logic is kept separate from React and Phaser.
 
-- `src/simulation/` contains deterministic game rules, campaign state, save shape handling, tick logic, market math, books, workers, housing, food, offline boost behavior, and the worker-second balance model (`balance.ts`) used to tune project requirements.
-- `src/data/` contains resource, building, recipe, book, and chapter project definitions.
+- `src/simulation/` contains deterministic game rules, campaign and expedition state, combat previews and results, invasion/Experience rules, save shape handling, tick logic, market math, books, workers, housing, food, offline boost behavior, and the worker-second balance model (`balance.ts`) used to tune project requirements.
+- `src/data/` contains resource, building, recipe, book, chapter project, troop, map node, and Experience perk definitions.
 - `src/store/` connects the simulation layer to Zustand and browser storage.
 - `src/ui/` contains React panels, resource bars, contextual popups, and controls.
 - `src/game/` contains the Phaser town scene and hotspot rendering.

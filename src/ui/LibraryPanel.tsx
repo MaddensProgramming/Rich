@@ -182,7 +182,6 @@ export function LibraryPanel({ game }: LibraryPanelProps) {
                       definition.description,
                       effectText,
                       countText,
-                      `Total owned: ${total}`,
                       bestOwned ? 'Highest rarity auto-equipped.' : 'No copy owned.',
                     ].join('\n');
 
@@ -206,7 +205,6 @@ export function LibraryPanel({ game }: LibraryPanelProps) {
                             <strong>{getBookInitials(definition.label)}</strong>
                             <span>{effectLabel}</span>
                           </span>
-                          <span className="book-copy-badge">x{total}</span>
                         </div>
                         <div className="book-rarity-counts" aria-hidden="true">
                           {counts.map((entry) => (

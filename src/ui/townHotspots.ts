@@ -19,6 +19,9 @@ export interface TownHotspotSnapshot extends TownHotspotPlacement {
   blocked: boolean;
   selected: boolean;
   buildingId?: BuildingId;
+  canAddWorker?: boolean;
+  canRemoveWorker?: boolean;
+  workers?: number;
 }
 
 export interface TownHotspotSelection {

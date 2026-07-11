@@ -1,5 +1,6 @@
 import { addOfflineCharge } from './gameState';
 import { tickGame } from './tick';
+import { advanceInvasionInPlace } from './expedition';
 import type { GameState } from './types';
 import { asFiniteNumber, clamp } from './utils';
 
@@ -17,7 +18,9 @@ export const advanceWallClockState = (
   }
 
   if (elapsedSeconds > ACTIVE_GAP_OFFLINE_THRESHOLD_SECONDS) {
-    return addOfflineCharge(state, elapsedSeconds);
+    const next = addOfflineCharge(state, elapsedSeconds);
+    advanceInvasionInPlace(next, elapsedSeconds);
+    return next;
   }
 
   return tickGame(state, asFiniteNumber(elapsedSeconds, 0));

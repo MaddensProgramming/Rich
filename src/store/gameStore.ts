@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { buildings, buildingById, recipes, recipeById } from '../data/buildings';
 import { books, bookById, rarities, rarityLabels } from '../data/books';
 import { resources, resourceById, resourceIds } from '../data/resources';
+import { expeditionNodes, experiencePerks, troops } from '../data/expedition';
 import {
   activateOfflineBoost as activateOfflineBoostInState,
   abandonContract as abandonContractInState,
@@ -36,6 +37,13 @@ import {
   upgradeBuilding as upgradeBuildingInState,
   upgradeHousing as upgradeHousingInState,
   createInitialGameState,
+  attackExpeditionNode as attackExpeditionNodeInState,
+  buyExperiencePerk as buyExperiencePerkInState,
+  constructBarracks as constructBarracksInState,
+  evacuateTown as evacuateTownInState,
+  prepareEvacuation as prepareEvacuationInState,
+  startNextRun as startNextRunInState,
+  trainTroops as trainTroopsInState,
 } from '../simulation';
 import type {
   BookId,
@@ -48,9 +56,12 @@ import type {
   RecipeId,
   ResourceId,
   ResourceMap,
+  ExperiencePerkId,
+  TroopId,
 } from '../simulation';
 
-const SAVE_KEY = 'st-moritz-save-v2';
+const SAVE_KEY = 'st-moritz-save-v3';
+const PREVIOUS_SAVE_KEY = 'st-moritz-save-v2';
 const LEGACY_SAVE_KEY = 'mountain-factory-idle-save-v1';
 
 const getStorage = (): Storage | null => {
@@ -72,7 +83,7 @@ const readSavedState = (): GameState => {
   }
 
   try {
-    const raw = storage.getItem(SAVE_KEY) ?? storage.getItem(LEGACY_SAVE_KEY);
+    const raw = storage.getItem(SAVE_KEY) ?? storage.getItem(PREVIOUS_SAVE_KEY) ?? storage.getItem(LEGACY_SAVE_KEY);
     return raw ? hydrateGameState(JSON.parse(raw)) : createInitialGameState();
   } catch {
     return createInitialGameState();
@@ -104,6 +115,9 @@ const definitions = {
   bookById,
   rarities,
   rarityLabels,
+  expeditionNodes,
+  experiencePerks,
+  troops,
 };
 
 type Definitions = typeof definitions;
@@ -148,6 +162,13 @@ export interface GameStore extends GameState {
   stopOfflineBoost: () => void;
   hireWorker: () => void;
   upgradeHousing: () => void;
+  constructBarracks: () => void;
+  trainTroops: (troopId: TroopId, quantity?: number) => void;
+  attackExpeditionNode: (nodeId: string) => void;
+  prepareEvacuation: () => void;
+  evacuateTown: () => void;
+  buyExperiencePerk: (perkId: ExperiencePerkId) => void;
+  startNextRun: () => void;
   saveNow: () => void;
   resetGame: () => void;
 }
@@ -284,6 +305,36 @@ export const useGameStore = create<GameStore>((set, get) => {
 
     upgradeHousing: () => {
       set((state) => withDerivedState(upgradeHousingInState(state)));
+    },
+
+    constructBarracks: () => {
+      set((state) => withDerivedState(constructBarracksInState(state)));
+    },
+
+    trainTroops: (troopId, quantity = 1) => {
+      set((state) => withDerivedState(trainTroopsInState(state, troopId, quantity)));
+    },
+
+    attackExpeditionNode: (nodeId) => {
+      set((state) => withDerivedState(attackExpeditionNodeInState(state, nodeId)));
+    },
+
+    prepareEvacuation: () => {
+      set((state) => withDerivedState(prepareEvacuationInState(state)));
+    },
+
+    evacuateTown: () => {
+      set((state) => withDerivedState(evacuateTownInState(state)));
+    },
+
+    buyExperiencePerk: (perkId) => {
+      set((state) => withDerivedState(buyExperiencePerkInState(state, perkId)));
+    },
+
+    startNextRun: () => {
+      const now = Date.now();
+      lastWallClockMs = now;
+      set((state) => withDerivedState(startNextRunInState(state, now)));
     },
 
     saveNow: () => {

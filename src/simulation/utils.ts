@@ -213,6 +213,41 @@ export const cloneGameState = (state: GameState): GameState => ({
     activeContractIds: [...state.campaign.activeContractIds],
     completedContractIds: [...state.campaign.completedContractIds],
   },
+  expedition: {
+    phase: state.expedition.phase,
+    barracksConstructed: Boolean(state.expedition.barracksConstructed),
+    troops: {
+      militia: Math.max(0, Math.trunc(asFiniteNumber(state.expedition.troops.militia, 0))),
+      archer: Math.max(0, Math.trunc(asFiniteNumber(state.expedition.troops.archer, 0))),
+      guard: Math.max(0, Math.trunc(asFiniteNumber(state.expedition.troops.guard, 0))),
+    },
+    defeatedNodeIds: [...state.expedition.defeatedNodeIds],
+    invasionSecondsRemaining: Math.max(
+      0,
+      asFiniteNumber(state.expedition.invasionSecondsRemaining, 0),
+    ),
+    evacuationPrepared: Boolean(state.expedition.evacuationPrepared),
+    relicSecured: Boolean(state.expedition.relicSecured),
+    experienceEarnedThisRun: Math.max(
+      0,
+      Math.trunc(asFiniteNumber(state.expedition.experienceEarnedThisRun, 0)),
+    ),
+    lastBattle: state.expedition.lastBattle
+      ? {
+          ...state.expedition.lastBattle,
+          casualties: { ...state.expedition.lastBattle.casualties },
+        }
+      : null,
+  },
+  legacy: {
+    runNumber: Math.max(1, Math.trunc(asFiniteNumber(state.legacy.runNumber, 1))),
+    experiencePoints: Math.max(0, Math.trunc(asFiniteNumber(state.legacy.experiencePoints, 0))),
+    totalExperienceEarned: Math.max(
+      0,
+      Math.trunc(asFiniteNumber(state.legacy.totalExperienceEarned, 0)),
+    ),
+    perks: { ...state.legacy.perks },
+  },
   offline: {
     chargeSeconds: Math.max(0, asFiniteNumber(state.offline.chargeSeconds, 0)),
     active: Boolean(state.offline.active),

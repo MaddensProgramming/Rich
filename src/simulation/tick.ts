@@ -7,6 +7,7 @@ import {
   OFFLINE_BOOST_MULTIPLIER,
 } from './gameState';
 import { applyMarketAutomation, driftMarketPressureInPlace } from './market';
+import { advanceInvasionInPlace } from './expedition';
 import type { BuildingId, GameState, RecipeId, ResourceMap } from './types';
 import {
   addResourceMap,
@@ -293,6 +294,8 @@ export const tickGame = (state: GameState, requestedDeltaSeconds: number): GameS
   };
 
   next = applyMarketAutomation(next);
+  // The invasion uses real time so activating the production boost does not shorten the warning.
+  advanceInvasionInPlace(next, realDeltaSeconds);
 
   return next;
 };

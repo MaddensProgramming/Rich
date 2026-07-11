@@ -49,6 +49,8 @@ interface HotspotVisual {
   detail: Phaser.GameObjects.Text;
   status: Phaser.GameObjects.Arc;
   selection: Phaser.GameObjects.Rectangle;
+  addWorker: Phaser.GameObjects.Text;
+  removeWorker: Phaser.GameObjects.Text;
   hotspot: TownHotspotSnapshot;
 }
 
@@ -164,7 +166,11 @@ export class TownScene extends Phaser.Scene {
       visual.halo.setDisplaySize(width + 18, height + 18);
       visual.selection.setDisplaySize(width + 8, height + 8);
       visual.label.setText(hotspot.label);
-      visual.detail.setText(hotspot.detail);
+      visual.detail.setText(hotspot.kind === 'building' ? `${hotspot.workers ?? 0} workers` : hotspot.detail);
+      visual.addWorker.setVisible(hotspot.kind === 'building');
+      visual.removeWorker.setVisible(hotspot.kind === 'building');
+      visual.addWorker.setAlpha(hotspot.canAddWorker ? 1 : 0.34);
+      visual.removeWorker.setAlpha(hotspot.canRemoveWorker ? 1 : 0.34);
       visual.status.setFillStyle(hotspot.blocked ? 0xd8903f : selected ? 0xe2b34e : 0x73c66d);
       visual.body.setAlpha(selected ? 0.96 : hotspot.blocked ? 0.58 : 0.82);
       visual.halo.setAlpha(selected ? 0.18 : 0.08);
@@ -249,7 +255,21 @@ export class TownScene extends Phaser.Scene {
       .setOrigin(0.5)
       .setDepth(5);
     const status = this.add.circle(width / 2 - 12, -height / 2 + 10, 5, 0x73c66d).setDepth(6);
-    const container = this.add.container(position.x, position.y, [halo, selection, body, label, detail, status]).setDepth(4);
+    const workerButtonStyle: Phaser.Types.GameObjects.Text.TextStyle = {
+      align: 'center',
+      backgroundColor: 'rgba(248, 243, 223, 0.92)',
+      color: '#17211f',
+      fixedWidth: 20,
+      fixedHeight: 20,
+      fontFamily: 'Arial, sans-serif',
+      fontSize: '16px',
+      fontStyle: 'bold',
+    };
+    const removeWorker = this.add.text(-width / 2 + 17, 10, '-', workerButtonStyle).setOrigin(0.5).setDepth(7);
+    const addWorker = this.add.text(width / 2 - 17, 10, '+', workerButtonStyle).setOrigin(0.5).setDepth(7);
+    const container = this.add
+      .container(position.x, position.y, [halo, selection, body, label, detail, status, removeWorker, addWorker])
+      .setDepth(4);
     container.setData('hotspot', hotspot);
 
     const emitHotspotSelect = () => {
@@ -271,6 +291,29 @@ export class TownScene extends Phaser.Scene {
     label.setInteractive({ useHandCursor: true }).on(Phaser.Input.Events.POINTER_UP, emitHotspotSelect);
     detail.setInteractive({ useHandCursor: true }).on(Phaser.Input.Events.POINTER_UP, emitHotspotSelect);
 
+    const assignWorker = (delta: number) => {
+      if (this.inputLocked) {
+        return;
+      }
+
+      const current = container.getData('hotspot') as TownHotspotSnapshot;
+      const allowed = delta > 0 ? current.canAddWorker : current.canRemoveWorker;
+      if (!current.buildingId || !allowed) {
+        return;
+      }
+
+      this.game.events.emit('town:assign-workers', current.buildingId, (current.workers ?? 0) + delta);
+    };
+
+    removeWorker
+      .setVisible(hotspot.kind === 'building')
+      .setInteractive({ useHandCursor: true })
+      .on(Phaser.Input.Events.POINTER_UP, () => assignWorker(-1));
+    addWorker
+      .setVisible(hotspot.kind === 'building')
+      .setInteractive({ useHandCursor: true })
+      .on(Phaser.Input.Events.POINTER_UP, () => assignWorker(1));
+
     return {
       container,
       body,
@@ -279,6 +322,8 @@ export class TownScene extends Phaser.Scene {
       detail,
       status,
       selection,
+      addWorker,
+      removeWorker,
       hotspot,
     };
   }
@@ -384,6 +429,8 @@ export class TownScene extends Phaser.Scene {
       visual.body.setPosition(0, 0);
       visual.label.setPosition(0, -8);
       visual.detail.setPosition(0, 10);
+      visual.removeWorker.setPosition(-this.getHotspotWidth(visual.hotspot) / 2 + 17, 10);
+      visual.addWorker.setPosition(this.getHotspotWidth(visual.hotspot) / 2 - 17, 10);
     }
 
     for (const visual of this.gatherableVisuals.values()) {

@@ -100,8 +100,15 @@ export function WorkerPanel({ game }: WorkerPanelProps) {
         <button type="button" onClick={game.saveNow}>
           Save
         </button>
-        <button type="button" onClick={game.resetGame}>
-          Reset
+        <button
+          type="button"
+          onClick={() => {
+            if (window.confirm('Erase this town, every Experience perk, and all legacy progress?')) {
+              game.resetGame();
+            }
+          }}
+        >
+          Erase all progress
         </button>
       </div>
     </section>

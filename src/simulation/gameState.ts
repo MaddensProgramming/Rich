@@ -3,7 +3,9 @@ import { contractById } from '../data/contracts';
 import { buildingById, buildingIds } from '../data/buildings';
 import { bookById, rarities } from '../data/books';
 import { resourceIds } from '../data/resources';
+import { expeditionNodeById, INVASION_DURATION_SECONDS } from '../data/expedition';
 import { autoEquipBestBooks } from './books';
+import { advanceInvasionInPlace } from './expedition';
 import type {
   BuildingState,
   BookKey,
@@ -12,7 +14,10 @@ import type {
   CampaignState,
   ChapterId,
   EquippedBook,
+  ExpeditionState,
+  ExperiencePerkId,
   GameState,
+  LegacyState,
   MarketAutomationRule,
   MarketResourceState,
   ResourceId,
@@ -20,7 +25,7 @@ import type {
 } from './types';
 import { asFiniteNumber, clamp, cloneGameState, createEmptyStats, createResourceRecord } from './utils';
 
-export const SAVE_VERSION = 2;
+export const SAVE_VERSION = 3;
 export const DEFAULT_RNG_SEED = 0xdecafbad;
 export const MAX_OFFLINE_SECONDS = 8 * 60 * 60;
 export const MAX_OFFLINE_BOOST_GAME_SECONDS = 20 * 60;
@@ -32,6 +37,37 @@ export const INITIAL_CLEARING_STONE = 45;
 export const INITIAL_CLEARING_VEGETABLES = 35;
 export const SECOND_RECIPE_SLOT_LEVEL = 3;
 export const DEFAULT_WORKER_SHARE = 0.5;
+
+const experiencePerkIds: ExperiencePerkId[] = [
+  'pioneering_spirit',
+  'prepared_stores',
+  'merchant_contacts',
+  'battle_wisdom',
+];
+
+export const createDefaultExpeditionState = (): ExpeditionState => ({
+  phase: 'exploring',
+  barracksConstructed: false,
+  troops: { militia: 0, archer: 0, guard: 0 },
+  defeatedNodeIds: [],
+  invasionSecondsRemaining: 0,
+  evacuationPrepared: false,
+  relicSecured: false,
+  experienceEarnedThisRun: 0,
+  lastBattle: null,
+});
+
+export const createDefaultLegacyState = (): LegacyState => ({
+  runNumber: 1,
+  experiencePoints: 0,
+  totalExperienceEarned: 0,
+  perks: {
+    pioneering_spirit: 0,
+    prepared_stores: 0,
+    merchant_contacts: 0,
+    battle_wisdom: 0,
+  },
+});
 
 const initialWorkers: Record<BuildingId, number> = {
   mine: 0,
@@ -286,7 +322,19 @@ export const createDefaultMarketAutomation = () =>
     ]),
   ) as Record<ResourceId, MarketAutomationRule>;
 
-export const createInitialGameState = (now = Date.now()): GameState => ({
+export const createInitialGameState = (
+  now = Date.now(),
+  legacyState: LegacyState = createDefaultLegacyState(),
+): GameState => {
+  const legacy: LegacyState = {
+    runNumber: Math.max(1, Math.trunc(legacyState.runNumber)),
+    experiencePoints: Math.max(0, Math.trunc(legacyState.experiencePoints)),
+    totalExperienceEarned: Math.max(0, Math.trunc(legacyState.totalExperienceEarned)),
+    perks: Object.fromEntries(
+      experiencePerkIds.map((id) => [id, clamp(Math.trunc(legacyState.perks[id] ?? 0), 0, 5)]),
+    ) as LegacyState['perks'],
+  };
+  const state: GameState = {
   version: SAVE_VERSION,
   rngSeed: DEFAULT_RNG_SEED,
   createdAt: now,
@@ -328,13 +376,85 @@ export const createInitialGameState = (now = Date.now()): GameState => ({
     owned: {},
   },
   campaign: createDefaultCampaignState(),
+  expedition: createDefaultExpeditionState(),
+  legacy,
   offline: {
     chargeSeconds: 0,
     active: false,
   },
   stats: createEmptyStats(),
   recentBookPack: [],
-});
+  };
+
+  state.workers.total += legacy.perks.pioneering_spirit;
+  state.resources.wood += legacy.perks.prepared_stores * 15;
+  state.resources.stone += legacy.perks.prepared_stores * 12;
+  state.resources.food += legacy.perks.prepared_stores * 20;
+  state.money += legacy.perks.merchant_contacts * 150;
+  return state;
+};
+
+const normalizeLegacyState = (value: unknown): LegacyState => {
+  const fallback = createDefaultLegacyState();
+  const raw = isObject(value) ? value : {};
+  const rawPerks = isObject(raw.perks) ? raw.perks : {};
+  return {
+    runNumber: Math.max(1, Math.trunc(asFiniteNumber(raw.runNumber, fallback.runNumber))),
+    experiencePoints: Math.max(0, Math.trunc(asFiniteNumber(raw.experiencePoints, 0))),
+    totalExperienceEarned: Math.max(0, Math.trunc(asFiniteNumber(raw.totalExperienceEarned, 0))),
+    perks: Object.fromEntries(
+      experiencePerkIds.map((id) => [id, clamp(Math.trunc(asFiniteNumber(rawPerks[id], 0)), 0, 5)]),
+    ) as LegacyState['perks'],
+  };
+};
+
+const normalizeExpeditionState = (value: unknown): ExpeditionState => {
+  const fallback = createDefaultExpeditionState();
+  const raw = isObject(value) ? value : {};
+  const rawTroops = isObject(raw.troops) ? raw.troops : {};
+  const phase = raw.phase === 'invasion' || raw.phase === 'defeated' ? raw.phase : 'exploring';
+  const rawBattle = isObject(raw.lastBattle) ? raw.lastBattle : null;
+  const battleNodeId = rawBattle && typeof rawBattle.nodeId === 'string' ? rawBattle.nodeId : '';
+  const rawCasualties = rawBattle && isObject(rawBattle.casualties) ? rawBattle.casualties : {};
+
+  return {
+    phase,
+    barracksConstructed: Boolean(raw.barracksConstructed),
+    troops: {
+      militia: Math.max(0, Math.trunc(asFiniteNumber(rawTroops.militia, 0))),
+      archer: Math.max(0, Math.trunc(asFiniteNumber(rawTroops.archer, 0))),
+      guard: Math.max(0, Math.trunc(asFiniteNumber(rawTroops.guard, 0))),
+    },
+    defeatedNodeIds: Array.from(
+      new Set(
+        (Array.isArray(raw.defeatedNodeIds) ? raw.defeatedNodeIds : []).filter(
+          (id): id is string => typeof id === 'string' && id in expeditionNodeById,
+        ),
+      ),
+    ),
+    invasionSecondsRemaining:
+      phase === 'invasion'
+        ? clamp(asFiniteNumber(raw.invasionSecondsRemaining, INVASION_DURATION_SECONDS), 0, INVASION_DURATION_SECONDS)
+        : 0,
+    evacuationPrepared: Boolean(raw.evacuationPrepared),
+    relicSecured: Boolean(raw.relicSecured),
+    experienceEarnedThisRun: Math.max(0, Math.trunc(asFiniteNumber(raw.experienceEarnedThisRun, 0))),
+    lastBattle:
+      rawBattle && battleNodeId in expeditionNodeById
+        ? {
+            nodeId: battleNodeId,
+            victory: Boolean(rawBattle.victory),
+            armyPower: Math.max(0, asFiniteNumber(rawBattle.armyPower, 0)),
+            enemyPower: Math.max(0, asFiniteNumber(rawBattle.enemyPower, 0)),
+            casualties: {
+              militia: Math.max(0, Math.trunc(asFiniteNumber(rawCasualties.militia, 0))),
+              archer: Math.max(0, Math.trunc(asFiniteNumber(rawCasualties.archer, 0))),
+              guard: Math.max(0, Math.trunc(asFiniteNumber(rawCasualties.guard, 0))),
+            },
+          }
+        : fallback.lastBattle,
+  };
+};
 
 export const sanitizeGameState = (value: unknown, now = Date.now()): GameState => {
   const initial = createInitialGameState(now);
@@ -351,6 +471,7 @@ export const sanitizeGameState = (value: unknown, now = Date.now()): GameState =
   const rawOwnedBooks = isObject(rawBooks.owned) ? rawBooks.owned : {};
   const rawOffline = isObject(value.offline) ? value.offline : {};
   const rawCampaign = isObject(value.campaign) ? value.campaign : {};
+  const rawExpedition = isObject(value.expedition) ? value.expedition : {};
 
   const next = cloneGameState(initial);
   next.version = SAVE_VERSION;
@@ -431,6 +552,11 @@ export const sanitizeGameState = (value: unknown, now = Date.now()): GameState =
     active: Boolean(rawOffline.active),
   };
   next.campaign = normalizeCampaignState(rawCampaign, rawBuildings, initial.campaign.chapterId);
+  next.legacy = normalizeLegacyState(value.legacy);
+  next.expedition = normalizeExpeditionState(rawExpedition);
+  if (!next.campaign.campaignComplete && next.expedition.phase !== 'exploring') {
+    next.expedition = createDefaultExpeditionState();
+  }
   const currentChapter = chapterById[next.campaign.chapterId];
 
   for (const buildingId of buildingIds) {
@@ -495,8 +621,9 @@ export const addOfflineCharge = (state: GameState, elapsedSeconds: number): Game
 };
 
 export const applyOfflineProgress = (state: GameState, now = Date.now()): GameState => {
-  const elapsedSeconds = (now - state.lastSavedAt) / 1000;
+  const elapsedSeconds = Math.max(0, (now - state.lastSavedAt) / 1000);
   const next = addOfflineCharge(state, elapsedSeconds);
+  advanceInvasionInPlace(next, elapsedSeconds);
   next.lastSavedAt = now;
 
   return next;
