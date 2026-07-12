@@ -150,6 +150,7 @@ Money is tracked separately from physical resources. Resource definitions includ
 
 - Elder Bertram, a painted town chronicler, narrates each chapter and the final victory.
 - His dialogue introduces the new stage and states the current upgrade goal.
+- Selected expedition victories and defeats now include short character reactions in the latest-battle report.
 - The storyteller opens automatically on a new chapter and when the Great Hall reveals the mountain campaign, and can be reopened from the campaign strip.
 - Seen chapters and the victory message are tracked in saved campaign state so intros are not repeated.
 
@@ -175,7 +176,7 @@ Money is tracked separately from physical resources. Resource definitions includ
 
 - React displays resources, popups, market, library, contracts, town controls, and campaign project progress.
 - Phaser renders the town backdrop, clickable town hotspots, and clickable manual gathering props.
-- The town image is now the main interaction layer, with generated stage-specific backdrops for Arrival, Hamlet, Village, and Mountain Town.
+- The town image is now the main interaction layer, with generated stage-specific backdrops for Arrival, Hamlet, Village, and Mountain Town. Hamlet uses a dedicated early-settlement scene aligned to its mine, logging, farm, cookhouse, market, and project hotspots.
 - Clicking a hotspot opens one contextual popup at a time. Clicking wood, stone, or berry props gathers directly without opening a popup.
 - Escape or the close button dismisses the popup.
 - Translucent building labels on the town image, building cards, and building popups include + and - worker buttons for direct assignment.
@@ -280,7 +281,3 @@ Simulation logic is kept separate from React and Phaser.
 - `src/game/` contains the Phaser town scene and hotspot rendering.
 
 UI code should display state and dispatch actions. Production rules, chapter advancement, market math, food penalties, books, save/load shape, and offline boost behavior should stay in the simulation layer.
-
-## Not Yet Implemented
-
-- Dedicated chapter-specific town artwork.

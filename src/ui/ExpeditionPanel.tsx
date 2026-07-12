@@ -264,6 +264,20 @@ export function ExpeditionPanel({ game }: ExpeditionPanelProps) {
                   : expeditionNodeById[game.expedition.lastBattle.nodeId]?.label}
               </strong>
               <p>Casualties: {casualtyText(game.expedition.lastBattle.casualties)}.</p>
+              {game.expedition.lastBattle.nodeId !== 'northern_host'
+                ? (() => {
+                    const dialogue = expeditionNodeById[game.expedition.lastBattle.nodeId]?.eventDialogue;
+                    if (!dialogue) {
+                      return null;
+                    }
+
+                    return (
+                      <blockquote className="event-dialogue">
+                        {game.expedition.lastBattle.victory ? dialogue.victory : dialogue.defeat}
+                      </blockquote>
+                    );
+                  })()
+                : null}
             </section>
           ) : null}
 

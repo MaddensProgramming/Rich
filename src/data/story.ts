@@ -35,8 +35,9 @@ export const storySegments: StorySegment[] = [
       'Listen. Smoke in the chimneys. Mud on the boots. The place has begun muttering its own name.',
       'A farm, a cookhouse, and a market road. Civilization, if you squint and ignore the soup that bites back.',
       'Feed the workers, mind the coal, and keep the stones in a pile. Loose stones become arguments.',
+      'The new cottages even have doors. Most of them open in the intended direction.',
     ],
-    goal: 'Deliver 120 wood, 120 stone, 40 food, and 60 coal to crown this muddle a Village.',
+    goal: 'Deliver 160 wood, 160 stone, 53 food, and 80 coal to crown this muddle a Village.',
   },
   {
     id: 'village',

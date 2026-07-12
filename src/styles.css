@@ -415,6 +415,17 @@ p {
 .danger-button { color: white; border-color: #7d2d21; background: var(--danger); }
 .danger-button:hover:not(:disabled) { color: white; border-color: #5f2119; background: #8f3a29; }
 .battle-report-card > strong { color: var(--forest-dark); }
+.event-dialogue {
+  margin: 0;
+  padding: 8px 10px;
+  border-left: 3px solid var(--amber);
+  border-radius: 0 6px 6px 0;
+  color: #5a4930;
+  background: #f6eedb;
+  font-size: .72rem;
+  font-style: italic;
+  line-height: 1.4;
+}
 .evacuation-card { border: 2px solid #ad4c33; background: #fff4e9; }
 .final-stand-card { border: 2px solid #8d392b; background: #fff9ee; }
 .final-stand-card.stand-ready { border-color: #b0802f; background: #fff8d9; }

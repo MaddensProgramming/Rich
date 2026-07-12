@@ -25,6 +25,10 @@ export interface ExpeditionNodeDefinition {
   x: number;
   y: number;
   isRaidTown?: boolean;
+  eventDialogue?: {
+    victory: string;
+    defeat: string;
+  };
 }
 
 export interface ExperiencePerkDefinition {
@@ -96,6 +100,10 @@ export const expeditionNodes: ExpeditionNodeDefinition[] = [
     rewardMoney: 180,
     x: 10,
     y: 76,
+    eventDialogue: {
+      victory: 'Elder Bertram: “The toll is abolished. I checked twice; even the sign looked relieved.”',
+      defeat: 'Elder Bertram: “A tactical retreat. Very tactical. Especially the running.”',
+    },
   },
   {
     id: 'pinewood_camp',
@@ -108,6 +116,10 @@ export const expeditionNodes: ExpeditionNodeDefinition[] = [
     rewardMoney: 240,
     x: 25,
     y: 58,
+    eventDialogue: {
+      victory: 'Scout Marta: “We found our stolen bows. The bandits had been using one to hang laundry.”',
+      defeat: 'Scout Marta: “The trees have sided with them. I blame poor forestry policy.”',
+    },
   },
   {
     id: 'old_quarry',
@@ -120,6 +132,10 @@ export const expeditionNodes: ExpeditionNodeDefinition[] = [
     rewardMoney: 220,
     x: 24,
     y: 86,
+    eventDialogue: {
+      victory: 'Foreman Ulrich: “Quarry secured. The deserters left us three hammers and one very stern kettle.”',
+      defeat: 'Foreman Ulrich: “They threw rocks from a quarry. In hindsight, the supply was obvious.”',
+    },
   },
   {
     id: 'smugglers_track',
@@ -156,6 +172,10 @@ export const expeditionNodes: ExpeditionNodeDefinition[] = [
     rewardMoney: 450,
     x: 56,
     y: 62,
+    eventDialogue: {
+      victory: 'Elder Bertram: “The tower is ours. Please ignore the stairs; they are largely a rumor.”',
+      defeat: 'Elder Bertram: “The tower remains theirs. Gravity appears to be on the payroll.”',
+    },
   },
   {
     id: 'frozen_bridge',
@@ -230,6 +250,10 @@ export const expeditionNodes: ExpeditionNodeDefinition[] = [
     x: 94,
     y: 46,
     isRaidTown: true,
+    eventDialogue: {
+      victory: 'Elder Bertram: “A crown, a war chest, and an approaching army. Treasure is terribly clingy.”',
+      defeat: 'Elder Bertram: “Sonnenburg kept its crown. We kept the educational value of the attempt.”',
+    },
   },
 ];
 
