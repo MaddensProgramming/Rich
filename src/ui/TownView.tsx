@@ -12,7 +12,7 @@ import {
 } from '../simulation';
 import type { BuildingId, ResourceMap } from '../simulation';
 import type { GameStore } from '../store/gameStore';
-import { townHotspotPlacements, type TownHotspotSelection } from './townHotspots';
+import { getTownHotspotPlacements, type TownHotspotSelection } from './townHotspots';
 
 interface TownViewProps {
   game: GameStore;
@@ -110,6 +110,7 @@ const formatCostSummary = (cost: ResourceMap, game: GameStore) => {
 };
 
 const toSnapshot = (game: GameStore, selectedHotspotId: string | null, inputLocked: boolean): TownSnapshot => {
+  const chapter = getCampaignChapter(game);
   const assignedWorkers = game.definitions.buildings.reduce(
     (total, definition) => total + game.buildings[definition.id].workers,
     0,
@@ -124,7 +125,7 @@ const toSnapshot = (game: GameStore, selectedHotspotId: string | null, inputLock
     : [];
 
   return {
-    townBackdropKey: getCampaignChapter(game).townBackdropKey,
+    townBackdropKey: chapter.townBackdropKey,
     inputLocked,
     money: game.money,
     food: game.resources.food,
@@ -138,48 +139,46 @@ const toSnapshot = (game: GameStore, selectedHotspotId: string | null, inputLock
       blocked: Boolean(game.stats.blockedBuildings[definition.id]),
     })),
     gatherables,
-    hotspots: townHotspotPlacements.flatMap((placement) => {
-    const chapter = getCampaignChapter(game);
+    hotspots: getTownHotspotPlacements(chapter.id).flatMap((placement) => {
+      if (placement.kind === 'building') {
+        const buildingId = placement.id as BuildingId;
+        if (!chapter.availableBuildingIds.includes(buildingId)) {
+          return [];
+        }
 
-    if (placement.kind === 'building') {
-      const buildingId = placement.id as BuildingId;
-      if (!chapter.availableBuildingIds.includes(buildingId)) {
+        const building = game.buildings[buildingId];
+        const constructed = isBuildingConstructed(game, buildingId);
+        const buildable = canConstructBuilding(game, buildingId);
+        const blocked = Boolean(game.stats.blockedBuildings[buildingId]) || (!constructed && !buildable);
+
+        return {
+          ...placement,
+          label: getStageBuildingLabel(game, buildingId),
+          detail: constructed
+            ? `Lv ${building.level} · ${building.workers} workers`
+            : buildable
+              ? 'Ready to build'
+              : `Needs ${formatCostSummary(getBuildingConstructionCost(buildingId), game)}`,
+          blocked,
+          selected: selectedHotspotId === buildingId,
+          buildingId,
+          workers: building.workers,
+          canAddWorker: constructed && idleWorkers > 0,
+          canRemoveWorker: constructed && building.workers > 0,
+        };
+      }
+
+      if (placement.kind === 'market' && !game.campaign.unlockedSystems.market) {
         return [];
       }
 
-      const building = game.buildings[buildingId];
-      const constructed = isBuildingConstructed(game, buildingId);
-      const buildable = canConstructBuilding(game, buildingId);
-      const blocked = Boolean(game.stats.blockedBuildings[buildingId]) || (!constructed && !buildable);
+      if (placement.kind === 'library' && !game.campaign.unlockedSystems.library) {
+        return [];
+      }
 
-      return {
-        ...placement,
-        label: getStageBuildingLabel(game, buildingId),
-        detail: constructed
-          ? `Lv ${building.level} · ${building.workers} workers`
-          : buildable
-            ? 'Ready to build'
-            : `Needs ${formatCostSummary(getBuildingConstructionCost(buildingId), game)}`,
-        blocked,
-        selected: selectedHotspotId === buildingId,
-        buildingId,
-        workers: building.workers,
-        canAddWorker: constructed && idleWorkers > 0,
-        canRemoveWorker: constructed && building.workers > 0,
-      };
-    }
-
-    if (placement.kind === 'market' && !game.campaign.unlockedSystems.market) {
-      return [];
-    }
-
-    if (placement.kind === 'library' && !game.campaign.unlockedSystems.library) {
-      return [];
-    }
-
-    if (placement.kind === 'contracts' && !game.campaign.unlockedSystems.contracts) {
-      return [];
-    }
+      if (placement.kind === 'contracts' && !game.campaign.unlockedSystems.contracts) {
+        return [];
+      }
 
       return {
         ...placement,

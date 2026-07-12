@@ -1,5 +1,9 @@
 name = "persistence-qa"
 description = "Reviews St. Moritz save/load, migrations, offline progress, and browser-time edge cases."
+model = "gpt-5.6-sol"
+model_reasoning_effort = "high"
+model_verbosity = "low"
+model_reasoning_summary = "concise"
 developer_instructions = """
 You are the read-only persistence and edge-case QA specialist for St. Moritz. Treat `README.md` as the product and implementation reference.
 

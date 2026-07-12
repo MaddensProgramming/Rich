@@ -246,27 +246,13 @@ p {
   flex: 1;
   min-height: 560px;
   overflow: hidden;
-  background:
-    radial-gradient(circle at 83% 23%, rgba(255,255,255,.8) 0 4%, transparent 15%),
-    linear-gradient(155deg, transparent 0 47%, rgba(94,129,117,.25) 48% 50%, transparent 51%),
-    radial-gradient(ellipse at 52% 66%, #b8c9a7 0 18%, transparent 40%),
-    linear-gradient(135deg, #dbe6ce, #aac2b0 52%, #d3ddca);
+  background-image:
+    linear-gradient(rgba(24, 42, 35, .08), rgba(24, 42, 35, .16)),
+    url('./assets/expedition/campaign-map-v1.png');
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
 }
-
-.world-map::before,
-.world-map::after {
-  content: '';
-  position: absolute;
-  width: 48%;
-  height: 44%;
-  border-radius: 48% 52% 18% 28%;
-  background: linear-gradient(145deg, rgba(255,255,255,.8), rgba(89,117,105,.3));
-  transform: rotate(-9deg);
-  pointer-events: none;
-}
-
-.world-map::before { left: 30%; top: -12%; }
-.world-map::after { right: -16%; bottom: -12%; transform: rotate(24deg); }
 
 .map-routes {
   position: absolute;
@@ -278,15 +264,16 @@ p {
 }
 
 .map-routes line {
-  stroke: rgba(63, 79, 69, 0.5);
-  stroke-width: 0.7;
+  stroke: rgba(255, 244, 207, 0.88);
+  stroke-width: 1.15;
   stroke-dasharray: 2 1.5;
   vector-effect: non-scaling-stroke;
+  filter: drop-shadow(0 1px 1px rgba(28, 42, 35, .8));
 }
 
 .map-routes line.route-cleared {
-  stroke: #b67b31;
-  stroke-width: 1.1;
+  stroke: #efb24a;
+  stroke-width: 1.4;
   stroke-dasharray: none;
 }
 
@@ -323,8 +310,9 @@ p {
   display: flex;
   align-items: center;
   gap: 5px;
-  color: #234538;
+  color: #fff8e8;
   font-size: .75rem;
+  text-shadow: 0 1px 3px rgba(18, 31, 26, .95);
 }
 
 .map-home-marker span { font-size: 1.3rem; }

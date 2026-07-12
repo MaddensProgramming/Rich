@@ -1,5 +1,28 @@
+# Cost-conscious defaults adapted from Jogan/soluna-workflow.
+model = "gpt-5.6-sol"
+model_reasoning_effort = "low"
+model_verbosity = "low"
+model_reasoning_summary = "concise"
+
+# Pin repository-safe root behavior.
+approval_policy = "on-request"
+approvals_reviewer = "auto_review"
+sandbox_mode = "workspace-write"
+
+# Keep durable instructions and raw tool output from consuming task context.
+project_doc_max_bytes = 12288
+tool_output_token_limit = 8000
+
+compact_prompt = """
+Preserve the user goal, acceptance criteria, constraints, decisions and rationale,
+relevant and changed files, concise observed validation, authorization boundaries,
+unresolved blockers, and the next action. Drop repeated exploration, superseded
+plans, raw logs already summarized, speculation, and conversational filler.
+Never convert an unverified claim into a completed fact.
+"""
 [agents]
-max_threads = 4
+# Root plus at most two workers; workers cannot recursively delegate.
+max_threads = 5
 max_depth = 1
 job_max_runtime_seconds = 1800
-
+interrupt_message = false

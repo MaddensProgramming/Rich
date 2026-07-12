@@ -37,6 +37,7 @@ GitHub Pages must be enabled in the repository settings with **Source** set to *
 - Unassigned workers can enlist as militia, archers, or guards. Military equipment is now a major production commitment: militia cost 30 food, 6 tools, and $50; archers cost 40 food, 4 bows, 2 tools, and $100; guards cost 60 food, 4 swords, 8 iron bars, 2 tools, and $200.
 - Enlisted troops remain part of the population used to price new worker hires. Turning townspeople into soldiers therefore no longer lowers the worker price and cannot be used to refill the town cheaply.
 - The map contains 12 branching locations. Securing prerequisite locations opens deeper routes and grants one-time resources and money.
+- The expedition route is displayed over a dedicated hand-painted Alpine campaign map, with interactive route lines and battle nodes layered over the terrain.
 - Battles are deterministic: the UI shows exact army power, enemy power, the expected result, and expected casualties before the player commits.
 - Losing a map battle costs troops but does not end the run; the location can be attempted again after rebuilding.
 
@@ -176,7 +177,7 @@ Money is tracked separately from physical resources. Resource definitions includ
 
 - React displays resources, popups, market, library, contracts, town controls, and campaign project progress.
 - Phaser renders the town backdrop, clickable town hotspots, and clickable manual gathering props.
-- The town image is now the main interaction layer, with generated stage-specific backdrops for Arrival, Hamlet, Village, and Mountain Town. Hamlet uses a dedicated early-settlement scene aligned to its mine, logging, farm, cookhouse, market, and project hotspots.
+- The town image is now the main interaction layer, with generated stage-specific backdrops for Arrival, Hamlet, Village, and Mountain Town. Every chapter has stage-specific hotspot coordinates so building labels remain centered on the matching landmark as the settlement grows.
 - Clicking a hotspot opens one contextual popup at a time. Clicking wood, stone, or berry props gathers directly without opening a popup.
 - Escape or the close button dismisses the popup.
 - Translucent building labels on the town image, building cards, and building popups include + and - worker buttons for direct assignment.

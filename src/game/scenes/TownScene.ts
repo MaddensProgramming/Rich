@@ -1,10 +1,10 @@
 import Phaser from 'phaser';
-import arrivalBackdropUrl from '../../assets/town/arrival-backdrop.png';
+import arrivalBackdropUrl from '../../assets/town/arrival-backdrop-v2.png';
 import berriesGatheringUrl from '../../assets/gathering/berries.png';
 import hamletBackdropUrl from '../../assets/town/hamlet-backdrop-v2.png';
-import mountainTownBackdropUrl from '../../assets/town/mountain-town-generated-backdrop.png';
+import mountainTownBackdropUrl from '../../assets/town/mountain-town-backdrop-v2.png';
 import stoneGatheringUrl from '../../assets/gathering/stone.png';
-import villageBackdropUrl from '../../assets/town/village-backdrop.png';
+import villageBackdropUrl from '../../assets/town/village-backdrop-v2.png';
 import woodGatheringUrl from '../../assets/gathering/wood.png';
 import type { BuildingId, ResourceId } from '../../simulation';
 import type { TownHotspotId, TownHotspotSelection, TownHotspotSnapshot } from '../../ui/townHotspots';
