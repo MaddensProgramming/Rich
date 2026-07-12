@@ -57,6 +57,8 @@ export interface ProgressionSimulatorOptions {
   maxInvestmentsPerDecision?: number;
   /** Book packs bought after reaching the chapter workforce target. */
   bookPacksToBuy?: number;
+  /** Buy books immediately in Village, or retain the baseline workforce-target gate. */
+  bookPurchaseTiming?: 'workforce-target' | 'village-early';
   /** Optional earned charge for scenarios that begin with offline boost available. */
   offlineChargeSeconds?: number;
   /** Finish profitable town contracts before donating overlapping goods to chapter projects. */
@@ -105,6 +107,7 @@ export interface ProgressionSimulationResult {
   finalState: GameState;
   systemsUsed: {
     bookPacksPurchased: number;
+    firstBookPurchaseAtSeconds: number | null;
     contractsCompleted: number;
     offlineBoostGameSecondsUsed: number;
     marketArbitrageProfit: number;
@@ -776,6 +779,7 @@ export const simulatePlayerProgression = (
   const targetWorkers = { ...defaultTargetWorkers, ...options.targetWorkersByChapter };
   const targetLevels = { ...defaultTargetLevels, ...options.targetBuildingLevelByChapter };
   const bookPacksToBuy = Math.max(0, Math.trunc(options.bookPacksToBuy ?? 5));
+  const bookPurchaseTiming = options.bookPurchaseTiming ?? 'workforce-target';
   const completeContractsBeforeProjects = options.completeContractsBeforeProjects ?? true;
   const deliverWhileGrowing = options.deliverWhileGrowing ?? false;
   const productionPolicy = options.productionPolicy ?? 'goal';
@@ -789,6 +793,7 @@ export const simulatePlayerProgression = (
   }
   const startingOfflineCharge = state.offline.chargeSeconds;
   let bookPacksPurchased = 0;
+  let firstBookPurchaseAtSeconds: number | null = null;
   let contractsCompleted = 0;
   let marketArbitrageProfit = 0;
   let elapsedSeconds = 0;
@@ -849,7 +854,8 @@ export const simulatePlayerProgression = (
 
     if (
       state.campaign.unlockedSystems.library &&
-      state.workers.total >= targetWorkers[state.campaign.chapterId] &&
+      (bookPurchaseTiming === 'village-early' ||
+        state.workers.total >= targetWorkers[state.campaign.chapterId]) &&
       bookPacksPurchased < bookPacksToBuy
     ) {
       const desiredPackCount = bookPacksToBuy - bookPacksPurchased;
@@ -871,6 +877,7 @@ export const simulatePlayerProgression = (
       if (packCount > 0) {
         state = upgradeAllPossibleBooks(buyBookPack(state, packCount));
         bookPacksPurchased += packCount;
+        firstBookPurchaseAtSeconds ??= elapsedSeconds;
         actions.push(`bought ${packCount} book pack${packCount === 1 ? '' : 's'}`);
       }
     }
@@ -1001,6 +1008,7 @@ export const simulatePlayerProgression = (
     finalState: state,
     systemsUsed: {
       bookPacksPurchased,
+      firstBookPurchaseAtSeconds,
       contractsCompleted,
       offlineBoostGameSecondsUsed: Math.max(0, startingOfflineCharge - state.offline.chargeSeconds),
       marketArbitrageProfit,

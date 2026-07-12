@@ -267,9 +267,10 @@ Search for faster human-scale policies and simulate them through the first invas
 
 ```bash
 npm run optimize:progression
+npm run experiment:books
 ```
 
-The optimizer prints two leaderboards against the same live game data. The normal-economy search disables repeatable sell/buy round trips; its current best reaches the Great Hall at 31m40s and the invasion at 37m00s with 6/12/16 workers. The fastest current-rules search reaches the Great Hall at 28m20s and the invasion at 31m00s with 8/16/24 workers, 10 book packs, and two completed contracts. That sub-2,000-second result makes about $26,944 through repeatable batch market round trips, so it demonstrates a real balance exploit rather than a sustainable production pace. Both results are heuristic upper-quality player policies, not mathematical proofs of the global optimum.
+The optimizer prints deterministic comparisons against the same live game data and searches both workforce-gated and early-Village book purchases, including quantities up to 25 packs. Market round trips are disabled in normal searches: marginal batch pricing means selling and buying the same resource cannot produce arbitrage profit. Act II evaluation allows the full 30-minute target window; the maintained Great Hall fixture with 30 workers and level-5 buildings reaches the invasion in 27m10s. `npm run experiment:books` repeats the coarse 20/25/30/40/50 sweep and accepts explicit counts for refinement (for example, `npm run experiment:books -- 20 21 22 23 24 25`). These results are deterministic heuristic comparisons, not mathematical proofs of the global optimum.
 
 ## Architecture Notes
 

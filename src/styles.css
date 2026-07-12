@@ -2169,6 +2169,16 @@ input[type="checkbox"] {
 .contract-req { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; padding: 2px 8px 2px 3px; border-radius: 999px; background: #fbe6df; border: 1px solid var(--line); }
 .contract-req.met { background: #dff0e2; }
 .contract-reward { font-size: 13px; color: var(--amber); margin-bottom: 6px; }
+.contract-reward { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; }
+.contract-book-reward { padding: 2px 6px; border: 1px solid currentColor; border-radius: 999px; font-size: 11px; font-weight: 700; }
+.contract-receipt { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 8px 0; padding: 8px 10px; border: 1px solid #82a987; border-radius: 8px; background: #dff0e2; font-size: 12px; }
+.contract-receipt strong { color: var(--forest-dark); margin-right: 3px; }
+.formation-training { display: grid; gap: 6px; margin-top: 10px; padding-top: 9px; border-top: 1px solid var(--line); }
+.formation-training > div:first-child { display: grid; gap: 2px; }
+.formation-training small { color: var(--muted); font-size: .64rem; }
+.formation-training-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px; border-radius: 6px; background: var(--panel-soft); }
+.formation-training-row > div { display: grid; gap: 2px; }
+.formation-training-row button { flex: 0 0 auto; padding: 5px 7px; font-size: .65rem; }
 .contract-actions { display: flex; gap: 8px; }
 .contract-card button { padding: 6px 12px; border-radius: 8px; border: 1px solid var(--forest-dark); background: var(--forest); color: #fff; cursor: pointer; }
 .contract-card button:disabled { opacity: 0.5; cursor: default; }

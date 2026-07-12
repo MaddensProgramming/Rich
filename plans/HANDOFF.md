@@ -4,30 +4,30 @@ Keep only the context needed to continue in a fresh task. Replace stale informat
 
 ## Objective and current state
 
-- **Objective:** TODO
-- **Active plan/current task:** TODO
-- **Branch/commit:** TODO
+- **Objective:** Improve optimizer treatment of library books and test counts above 20.
+- **Active plan/current task:** Completed; ready for user review.
+- **Branch/commit:** Current working branch; uncommitted.
 
 ## Decisions and authorization boundaries
 
-- **Decisions:** TODO
+- **Decisions:** Search book count through 25, including the observed 23-pack optimum, and retain gameplay book balance unchanged.
 - **Allowed targets:** This repository/workspace unless stated otherwise
 - **External/destructive actions approved:** None
 - **Credential scope:** None
 
 ## Changed files
 
-- None
+- README.md, package.json, scripts/experimentBooks.ts, scripts/optimizeProgression.ts, src/simulation/policyOptimizer.ts, src/simulation/progressionSimulator.ts, and focused tests.
 
 ## Validation evidence
 
-- **Observed:** None
-- **Unverified claims:** None
+- **Observed:** Normal economy best 35m30s invasion with 23 packs; current-rules best 29m30s with 20 packs. Counts 25–50 regressed. Full 53-test suite and production build pass.
+- **Unverified claims:** No global-optimum claim; results are deterministic heuristic searches.
 
 ## Blockers, risks, and next action
 
-- **Blockers/risks:** TODO
-- **Next action:** TODO
+- **Blockers/risks:** Current-rules result still relies on repeatable market arbitrage; normal-economy result is the clean comparison.
+- **Next action:** User review or commit.
 
 ## Worker entries
 

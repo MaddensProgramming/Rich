@@ -1,0 +1,388 @@
+{
+  "version": 3,
+  "rngSeed": 3737844653,
+  "createdAt": 1783823883892,
+  "lastSavedAt": 1783823883892,
+  "totalGameSeconds": 0,
+  "money": 100000,
+  "resources": {
+    "vegetables": 8,
+    "food": 18,
+    "wood": 12,
+    "stone": 10,
+    "coal": 0,
+    "iron_ore": 0,
+    "iron_bars": 0,
+    "bows": 0,
+    "swords": 0,
+    "planks": 0,
+    "tools": 0,
+    "stone_blocks": 0
+  },
+  "workers": {
+    "total": 30,
+    "housingCapacity": 40
+  },
+  "buildings": {
+    "mine": {
+      "id": "mine",
+      "level": 5,
+      "workers": 0,
+      "recipeId": "mine_balanced",
+      "secondaryRecipeId": null,
+      "workerShare": 0.5,
+      "equippedBooks": []
+    },
+    "lumberjack": {
+      "id": "lumberjack",
+      "level": 5,
+      "workers": 0,
+      "recipeId": "lumberjack_wood",
+      "secondaryRecipeId": null,
+      "workerShare": 0.5,
+      "equippedBooks": []
+    },
+    "farm": {
+      "id": "farm",
+      "level": 5,
+      "workers": 0,
+      "recipeId": "farm_vegetables",
+      "secondaryRecipeId": null,
+      "workerShare": 0.5,
+      "equippedBooks": []
+    },
+    "food_maker": {
+      "id": "food_maker",
+      "level": 5,
+      "workers": 0,
+      "recipeId": "food_maker_basic_food",
+      "secondaryRecipeId": null,
+      "workerShare": 0.5,
+      "equippedBooks": []
+    },
+    "smelter": {
+      "id": "smelter",
+      "level": 5,
+      "workers": 0,
+      "recipeId": "smelter_iron_bars",
+      "secondaryRecipeId": null,
+      "workerShare": 0.5,
+      "equippedBooks": []
+    },
+    "blacksmith": {
+      "id": "blacksmith",
+      "level": 5,
+      "workers": 0,
+      "recipeId": "blacksmith_bows",
+      "secondaryRecipeId": null,
+      "workerShare": 0.5,
+      "equippedBooks": []
+    },
+    "stonemason": {
+      "id": "stonemason",
+      "level": 5,
+      "workers": 0,
+      "recipeId": "stonemason_blocks",
+      "secondaryRecipeId": null,
+      "workerShare": 0.5,
+      "equippedBooks": []
+    }
+  },
+  "market": {
+    "vegetables": {
+      "pressure": 1
+    },
+    "food": {
+      "pressure": 1
+    },
+    "wood": {
+      "pressure": 1
+    },
+    "stone": {
+      "pressure": 1
+    },
+    "coal": {
+      "pressure": 1
+    },
+    "iron_ore": {
+      "pressure": 1
+    },
+    "iron_bars": {
+      "pressure": 1
+    },
+    "bows": {
+      "pressure": 1
+    },
+    "swords": {
+      "pressure": 1
+    },
+    "planks": {
+      "pressure": 1
+    },
+    "tools": {
+      "pressure": 1
+    },
+    "stone_blocks": {
+      "pressure": 1
+    }
+  },
+  "marketAutomation": {
+    "vegetables": {
+      "buyBelow": null,
+      "sellAbove": null,
+      "batchSize": 10,
+      "lastRunAt": 0
+    },
+    "food": {
+      "buyBelow": null,
+      "sellAbove": null,
+      "batchSize": 10,
+      "lastRunAt": 0
+    },
+    "wood": {
+      "buyBelow": null,
+      "sellAbove": null,
+      "batchSize": 10,
+      "lastRunAt": 0
+    },
+    "stone": {
+      "buyBelow": null,
+      "sellAbove": null,
+      "batchSize": 10,
+      "lastRunAt": 0
+    },
+    "coal": {
+      "buyBelow": null,
+      "sellAbove": null,
+      "batchSize": 10,
+      "lastRunAt": 0
+    },
+    "iron_ore": {
+      "buyBelow": null,
+      "sellAbove": null,
+      "batchSize": 10,
+      "lastRunAt": 0
+    },
+    "iron_bars": {
+      "buyBelow": null,
+      "sellAbove": null,
+      "batchSize": 10,
+      "lastRunAt": 0
+    },
+    "bows": {
+      "buyBelow": null,
+      "sellAbove": null,
+      "batchSize": 10,
+      "lastRunAt": 0
+    },
+    "swords": {
+      "buyBelow": null,
+      "sellAbove": null,
+      "batchSize": 10,
+      "lastRunAt": 0
+    },
+    "planks": {
+      "buyBelow": null,
+      "sellAbove": null,
+      "batchSize": 10,
+      "lastRunAt": 0
+    },
+    "tools": {
+      "buyBelow": null,
+      "sellAbove": null,
+      "batchSize": 10,
+      "lastRunAt": 0
+    },
+    "stone_blocks": {
+      "buyBelow": null,
+      "sellAbove": null,
+      "batchSize": 10,
+      "lastRunAt": 0
+    }
+  },
+  "books": {
+    "owned": {
+      "deep_veins:common": 25,
+      "deep_veins:uncommon": 25,
+      "deep_veins:rare": 25,
+      "deep_veins:epic": 25,
+      "deep_veins:legendary": 25,
+      "mine_cart_rails:common": 25,
+      "mine_cart_rails:uncommon": 25,
+      "mine_cart_rails:rare": 25,
+      "mine_cart_rails:epic": 25,
+      "mine_cart_rails:legendary": 25,
+      "sharp_axes:common": 25,
+      "sharp_axes:uncommon": 25,
+      "sharp_axes:rare": 25,
+      "sharp_axes:epic": 25,
+      "sharp_axes:legendary": 25,
+      "forest_paths:common": 25,
+      "forest_paths:uncommon": 25,
+      "forest_paths:rare": 25,
+      "forest_paths:epic": 25,
+      "forest_paths:legendary": 25,
+      "crop_rotation:common": 25,
+      "crop_rotation:uncommon": 25,
+      "crop_rotation:rare": 25,
+      "crop_rotation:epic": 25,
+      "crop_rotation:legendary": 25,
+      "efficient_harvesting:common": 25,
+      "efficient_harvesting:uncommon": 25,
+      "efficient_harvesting:rare": 25,
+      "efficient_harvesting:epic": 25,
+      "efficient_harvesting:legendary": 25,
+      "preservation_methods:common": 25,
+      "preservation_methods:uncommon": 25,
+      "preservation_methods:rare": 25,
+      "preservation_methods:epic": 25,
+      "preservation_methods:legendary": 25,
+      "hearty_recipes:common": 25,
+      "hearty_recipes:uncommon": 25,
+      "hearty_recipes:rare": 25,
+      "hearty_recipes:epic": 25,
+      "hearty_recipes:legendary": 25,
+      "hotter_furnaces:common": 25,
+      "hotter_furnaces:uncommon": 25,
+      "hotter_furnaces:rare": 25,
+      "hotter_furnaces:epic": 25,
+      "hotter_furnaces:legendary": 25,
+      "coal_efficiency:common": 25,
+      "coal_efficiency:uncommon": 25,
+      "coal_efficiency:rare": 25,
+      "coal_efficiency:epic": 25,
+      "coal_efficiency:legendary": 25,
+      "bowyer_techniques:common": 25,
+      "bowyer_techniques:uncommon": 25,
+      "bowyer_techniques:rare": 25,
+      "bowyer_techniques:epic": 25,
+      "bowyer_techniques:legendary": 25,
+      "weapon_contracts:common": 25,
+      "weapon_contracts:uncommon": 25,
+      "weapon_contracts:rare": 25,
+      "weapon_contracts:epic": 25,
+      "weapon_contracts:legendary": 25,
+      "mason_squares:common": 25,
+      "mason_squares:uncommon": 25,
+      "mason_squares:rare": 25,
+      "mason_squares:epic": 25,
+      "mason_squares:legendary": 25,
+      "hoist_rigging:common": 25,
+      "hoist_rigging:uncommon": 25,
+      "hoist_rigging:rare": 25,
+      "hoist_rigging:epic": 25,
+      "hoist_rigging:legendary": 25
+    }
+  },
+  "campaign": {
+    "chapterId": "mountain_town",
+    "completedUpgradeProjectIds": [
+      "arrival_upgrade_to_hamlet",
+      "hamlet_upgrade_to_village",
+      "village_upgrade_to_mountain_town",
+      "great_hall"
+    ],
+    "upgradeProjectDeliveries": {},
+    "upgradeProjectMoneyDelivered": {},
+    "constructedBuildings": {
+      "mine": true,
+      "lumberjack": true,
+      "farm": true,
+      "food_maker": true,
+      "smelter": true,
+      "blacksmith": true,
+      "stonemason": true
+    },
+    "unlockedSystems": {
+      "construction": true,
+      "manualGather": true,
+      "market": true,
+      "library": true,
+      "offlineBoost": true,
+      "contracts": true
+    },
+    "clearingWood": 60,
+    "clearingStone": 45,
+    "clearingVegetables": 35,
+    "campaignComplete": true,
+    "seenStoryChapters": [],
+    "seenVictory": false,
+    "activeContractIds": [],
+    "lastContractCompletion": null,
+    "completedContractIds": []
+  },
+  "expedition": {
+    "phase": "exploring",
+    "barracksConstructed": false,
+    "troops": {
+      "militia": 0,
+      "archer": 0,
+      "guard": 0
+    },
+    "trainingLevels": {
+      "militia": 0,
+      "archer": 0,
+      "guard": 0
+    },
+    "defeatedNodeIds": [],
+    "invasionSecondsRemaining": 0,
+    "evacuationPrepared": false,
+    "relicSecured": false,
+    "experienceEarnedThisRun": 0,
+    "lastBattle": null
+  },
+  "legacy": {
+    "runNumber": 1,
+    "experiencePoints": 0,
+    "totalExperienceEarned": 0,
+    "perks": {
+      "pioneering_spirit": 0,
+      "prepared_stores": 0,
+      "merchant_contacts": 0,
+      "battle_wisdom": 0,
+      "book_of_wisdom": 0,
+      "starting_capital": 0,
+      "village_bonds": 0
+    }
+  },
+  "offline": {
+    "chargeSeconds": 0,
+    "active": false
+  },
+  "stats": {
+    "productionPerSecond": {},
+    "consumptionPerSecond": {},
+    "netPerSecond": {},
+    "buildingProductionPerSecond": {
+      "mine": {},
+      "lumberjack": {},
+      "farm": {},
+      "food_maker": {},
+      "smelter": {},
+      "blacksmith": {},
+      "stonemason": {}
+    },
+    "buildingConsumptionPerSecond": {
+      "mine": {},
+      "lumberjack": {},
+      "farm": {},
+      "food_maker": {},
+      "smelter": {},
+      "blacksmith": {},
+      "stonemason": {}
+    },
+    "effectiveWorkers": {
+      "mine": 0,
+      "lumberjack": 0,
+      "farm": 0,
+      "food_maker": 0,
+      "smelter": 0,
+      "blacksmith": 0,
+      "stonemason": 0
+    },
+    "blockedBuildings": {},
+    "globalProductionMultiplier": 1,
+    "gameSpeed": 1
+  },
+  "recentBookPack": []
+}

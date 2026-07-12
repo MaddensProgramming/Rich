@@ -211,6 +211,9 @@ export const cloneGameState = (state: GameState): GameState => ({
     seenStoryChapters: [...state.campaign.seenStoryChapters],
     seenVictory: Boolean(state.campaign.seenVictory),
     activeContractIds: [...state.campaign.activeContractIds],
+    lastContractCompletion: state.campaign.lastContractCompletion
+      ? { ...state.campaign.lastContractCompletion, rewardBooks: state.campaign.lastContractCompletion.rewardBooks.map((reward) => ({ ...reward })) }
+      : null,
     completedContractIds: [...state.campaign.completedContractIds],
   },
   expedition: {
@@ -221,6 +224,7 @@ export const cloneGameState = (state: GameState): GameState => ({
       archer: Math.max(0, Math.trunc(asFiniteNumber(state.expedition.troops.archer, 0))),
       guard: Math.max(0, Math.trunc(asFiniteNumber(state.expedition.troops.guard, 0))),
     },
+    trainingLevels: { ...state.expedition.trainingLevels },
     defeatedNodeIds: [...state.expedition.defeatedNodeIds],
     invasionSecondsRemaining: Math.max(
       0,

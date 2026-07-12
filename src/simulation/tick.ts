@@ -105,7 +105,8 @@ const runSimulationStep = (
       0.65,
       0.97,
     );
-    const buildingMultiplier = definition.baseProductionMultiplier * (1 + (building.level - 1) * 0.25);
+    const buildingMultiplier = definition.baseProductionMultiplier * (1 + (building.level - 1) * 0.25) *
+      (1 + state.legacy.perks.book_of_wisdom * 0.1);
 
     const secondaryActive =
       building.secondaryRecipeId !== null &&

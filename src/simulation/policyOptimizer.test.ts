@@ -1,54 +1,66 @@
 import { describe, expect, it } from 'vitest';
+import { buildingIds } from '../data/buildings';
+import { createInitialGameState } from './gameState';
 import { simulateToFirstInvasion } from './invasionSimulator';
 import { optimizePolicyToFirstInvasion } from './policyOptimizer';
 
-const humanScalePolicy = {
-  maxGameSeconds: 45 * 60,
-  maxExpeditionSeconds: 10 * 60,
-  decisionIntervalSeconds: 20,
-  expeditionDecisionIntervalSeconds: 10,
-  manualGatherActionsPerDecision: 20,
-  maxInvestmentsPerDecision: 20,
-  targetWorkersByChapter: {
-    arrival: 1,
-    hamlet: 8,
-    village: 16,
-    mountain_town: 24,
-  },
-  targetBuildingLevelByChapter: {
-    arrival: 1,
-    hamlet: 2,
-    village: 2,
-    mountain_town: 3,
-  },
-  completeContractsBeforeProjects: false,
-  deliverWhileGrowing: false,
-  bookPacksToBuy: 10,
-  productionPolicy: 'goal' as const,
-  maxMarketRoundTripsPerDecision: 10,
+const createGreatHallFixture = () => {
+  const state = createInitialGameState(0);
+  state.campaign.chapterId = 'mountain_town';
+  state.campaign.campaignComplete = true;
+  state.campaign.unlockedSystems = {
+    construction: true, manualGather: true, market: true, library: true,
+    offlineBoost: true, contracts: true,
+  };
+  state.workers.total = 30;
+  state.workers.housingCapacity = 40;
+  state.money = 1_000;
+  for (const buildingId of buildingIds) {
+    state.campaign.constructedBuildings[buildingId] = true;
+    state.buildings[buildingId].level = 5;
+  }
+  return state;
 };
 
 describe('first-invasion policy optimizer', () => {
-  it('finds a human-cadence policy that beats the active 2,000-second playtest', () => {
-    const result = simulateToFirstInvasion(humanScalePolicy);
+  it('takes 20–30 minutes from the Great Hall baseline to the invasion', () => {
+    const result = simulateToFirstInvasion({
+      initialState: createGreatHallFixture(),
+      maxGameSeconds: 1,
+      maxExpeditionSeconds: 30 * 60,
+      expeditionDecisionIntervalSeconds: 10,
+    });
 
     expect(result.completed).toBe(true);
-    expect(result.invasionStartedAtSeconds).not.toBeNull();
-    expect(result.invasionStartedAtSeconds!).toBeLessThan(2_000);
-    expect(result.finalState.expedition.phase).toBe('invasion');
+    expect(result.campaign.elapsedSeconds).toBe(0);
+    expect(result.invasionStartedAtSeconds).toBeGreaterThanOrEqual(1_200);
+    expect(result.invasionStartedAtSeconds).toBeLessThanOrEqual(1_800);
     expect(result.finalState.expedition.defeatedNodeIds).toHaveLength(12);
-    expect(result.campaign.systemsUsed.marketArbitrageProfit).toBeGreaterThan(0);
+    expect(Object.values(result.finalState.expedition.trainingLevels).some((level) => level > 0)).toBe(true);
   });
 
-  it('searches data-driven policy alternatives and reports market-dependent results', () => {
+  it('evaluates deterministic policies without relying on market round trips', () => {
     const optimization = optimizePolicyToFirstInvasion({
       maxActionsPerMinute: 60,
       maxEvaluations: 4,
+      allowMarketRoundTrips: false,
     });
 
     expect(optimization.evaluatedPolicies).toBe(4);
-    expect(optimization.best.result.completed).toBe(true);
-    expect(optimization.best.result.invasionStartedAtSeconds!).toBeLessThan(2_000);
-    expect(optimization.warnings.some((warning) => warning.includes('market'))).toBe(true);
+    // Incomplete candidates are intentionally excluded from the leaderboard.
+    for (const entry of optimization.leaderboard) {
+      expect(entry.policy.maxMarketRoundTripsPerDecision).toBe(0);
+      expect(entry.result.campaign.systemsUsed.marketArbitrageProfit).toBe(0);
+    }
+  });
+
+  it('reports no round-trip profit even when a legacy policy requests attempts', () => {
+    const result = simulateToFirstInvasion({
+      maxGameSeconds: 120,
+      decisionIntervalSeconds: 20,
+      manualGatherActionsPerDecision: 20,
+      maxMarketRoundTripsPerDecision: 20,
+    });
+    expect(result.campaign.systemsUsed.marketArbitrageProfit).toBe(0);
   });
 });

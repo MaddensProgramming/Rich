@@ -1,6 +1,7 @@
 import {
   BARRACKS_CONSTRUCTION_COST,
   EVACUATION_COST,
+  EXPEDITION_ENEMY_POWER_MULTIPLIER,
   INVASION_DURATION_SECONDS,
   MAX_EXPERIENCE_PERK_LEVEL,
   NORTHERN_HOST_POWER,
@@ -46,10 +47,11 @@ export const getUnassignedWorkerCount = (state: GameState) =>
 
 export const getArmyPower = (state: GameState) => {
   const basePower = troopIds.reduce(
-    (total, troopId) => total + state.expedition.troops[troopId] * troopById[troopId].power,
+    (total, troopId) => total + state.expedition.troops[troopId] * troopById[troopId].power *
+      (1 + state.expedition.trainingLevels[troopId] * 0.1),
     0,
   );
-  const experienceMultiplier = 1 + state.legacy.perks.battle_wisdom * 0.15;
+  const experienceMultiplier = 1 + state.legacy.perks.battle_wisdom * 0.25;
   const relicMultiplier = state.expedition.relicSecured ? 1.25 : 1;
   return Math.round(basePower * experienceMultiplier * relicMultiplier);
 };
@@ -73,8 +75,8 @@ const getCasualtyCounts = (
 ): Record<TroopId, number> => {
   const totalTroops = troopIds.reduce((total, troopId) => total + state.expedition.troops[troopId], 0);
   const casualtyRate = victory
-    ? Math.min(0.34, (enemyPower / Math.max(1, armyPower)) * 0.24)
-    : Math.min(0.75, 0.42 + (enemyPower / Math.max(1, armyPower)) * 0.12);
+    ? Math.min(0.48, (enemyPower / Math.max(1, armyPower)) * 0.34)
+    : Math.min(0.85, 0.5 + (enemyPower / Math.max(1, armyPower)) * 0.15);
   let remaining = Math.min(totalTroops, Math.max(victory ? 0 : 1, Math.floor(totalTroops * casualtyRate)));
   const casualties: Record<TroopId, number> = { militia: 0, archer: 0, guard: 0 };
 
@@ -96,7 +98,8 @@ export const getBattlePreview = (state: GameState, nodeId: string): BattlePrevie
   const alreadyDefeated = state.expedition.defeatedNodeIds.includes(nodeId);
   const accessible = isExpeditionNodeAccessible(state, nodeId);
   const armyPower = getArmyPower(state);
-  const victory = armyPower >= node.enemyPower;
+  const enemyPower = Math.round(node.enemyPower * EXPEDITION_ENEMY_POWER_MULTIPLIER);
+  const victory = armyPower >= enemyPower;
   let reason: string | null = null;
 
   if (!state.campaign.campaignComplete) {
@@ -120,8 +123,8 @@ export const getBattlePreview = (state: GameState, nodeId: string): BattlePrevie
     nodeId,
     victory,
     armyPower,
-    enemyPower: node.enemyPower,
-    casualties: getCasualtyCounts(state, node.enemyPower, armyPower, victory),
+    enemyPower,
+    casualties: getCasualtyCounts(state, enemyPower, armyPower, victory),
     accessible,
     alreadyDefeated,
     reason,
@@ -180,6 +183,24 @@ export const trainTroops = (
   return next;
 };
 
+export const getTroopTrainingCost = (state: GameState, troopId: TroopId) => {
+  const level = state.expedition.trainingLevels[troopId];
+  const count = state.expedition.troops[troopId];
+  return { money: (level + 1) * count * 40, food: (level + 1) * count * 8 };
+};
+
+export const trainTroopFormation = (state: GameState, troopId: TroopId): GameState => {
+  const cost = getTroopTrainingCost(state, troopId);
+  if (!state.expedition.barracksConstructed || state.expedition.troops[troopId] <= 0 ||
+      state.expedition.trainingLevels[troopId] >= 10 || state.money < cost.money ||
+      state.resources.food < cost.food) return state;
+  const next = cloneGameState(state);
+  next.money -= cost.money;
+  next.resources.food -= cost.food;
+  next.expedition.trainingLevels[troopId] += 1;
+  return next;
+};
+
 export const attackExpeditionNode = (state: GameState, nodeId: string): GameState => {
   const node = expeditionNodeById[nodeId];
   const preview = getBattlePreview(state, nodeId);
@@ -211,6 +232,10 @@ export const attackExpeditionNode = (state: GameState, nodeId: string): GameStat
     next.resources[resourceId as keyof typeof next.resources] += amount ?? 0;
   }
   next.money += node.rewardMoney;
+  for (const reward of node.rewardBooks ?? []) {
+    const key = `${reward.bookId}:${reward.rarity}` as const;
+    next.books.owned[key] = (next.books.owned[key] ?? 0) + reward.count;
+  }
 
   if (node.isRaidTown) {
     next.expedition.phase = 'invasion';

@@ -58,6 +58,7 @@ describe('player progression simulator', () => {
     ]);
     expect(result.systemsUsed).toEqual({
       bookPacksPurchased: 5,
+      firstBookPurchaseAtSeconds: expect.any(Number),
       contractsCompleted: 10,
       offlineBoostGameSecondsUsed: 0,
       marketArbitrageProfit: 0,

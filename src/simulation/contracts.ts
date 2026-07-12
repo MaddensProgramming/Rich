@@ -77,5 +77,10 @@ export const completeContract = (state: GameState, contractId: string): GameStat
   next.campaign.completedContractIds = Array.from(
     new Set([...next.campaign.completedContractIds, contractId]),
   );
+  next.campaign.lastContractCompletion = {
+    contractId,
+    rewardMoney: contract.rewardMoney,
+    rewardBooks: (contract.rewardBooks ?? []).map((reward) => ({ ...reward })),
+  };
   return autoEquipBestBooks(next);
 };

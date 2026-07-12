@@ -11,6 +11,7 @@ export interface OptimizedPolicy {
   targetWorkersByChapter: Record<ChapterId, number>;
   targetBuildingLevelByChapter: Record<ChapterId, number>;
   bookPacksToBuy: number;
+  bookPurchaseTiming: 'workforce-target' | 'village-early';
   completeContractsBeforeProjects: boolean;
   deliverWhileGrowing: boolean;
   productionPolicy: 'static' | 'goal';
@@ -35,6 +36,7 @@ export interface PolicyOptimizationOptions {
     | 'targetWorkersByChapter'
     | 'targetBuildingLevelByChapter'
     | 'bookPacksToBuy'
+    | 'bookPurchaseTiming'
     | 'completeContractsBeforeProjects'
     | 'deliverWhileGrowing'
     | 'productionPolicy'
@@ -75,6 +77,7 @@ const policyKey = (policy: OptimizedPolicy) =>
     workers: policy.targetWorkersByChapter,
     levels: policy.targetBuildingLevelByChapter,
     packs: policy.bookPacksToBuy,
+    bookTiming: policy.bookPurchaseTiming,
     contracts: policy.completeContractsBeforeProjects,
     deliver: policy.deliverWhileGrowing,
     production: policy.productionPolicy,
@@ -112,7 +115,7 @@ const normalizePolicy = (
     previous = policy.targetWorkersByChapter[chapterId];
   }
   policy.targetWorkersByChapter.arrival = 1;
-  policy.bookPacksToBuy = Math.max(0, Math.min(20, Math.round(policy.bookPacksToBuy)));
+  policy.bookPacksToBuy = Math.max(0, Math.min(25, Math.round(policy.bookPacksToBuy)));
   const maximumRoundTrips = Math.floor(
     (maxActionsPerMinute * policy.decisionIntervalSeconds) / 60 / 2,
   );
@@ -135,16 +138,26 @@ const createSeedPolicies = (): OptimizedPolicy[] => {
     decisionIntervalSeconds: 20,
     targetBuildingLevelByChapter: { ...defaultBuildingLevels },
     bookPacksToBuy: 3,
+    bookPurchaseTiming: 'workforce-target' as const,
     completeContractsBeforeProjects: false,
     deliverWhileGrowing: false,
     productionPolicy: 'goal' as const,
     maxMarketRoundTripsPerDecision: 20,
   };
-  return [
-    { ...base, targetWorkersByChapter: createWorkerProfile(6, 12, 16) },
-    { ...base, targetWorkersByChapter: createWorkerProfile(8, 16, 24) },
+  const workerProfiles = [
+    { ...base, bookPacksToBuy: 23, targetWorkersByChapter: createWorkerProfile(6, 12, 16) },
+    { ...base, bookPacksToBuy: 20, targetWorkersByChapter: createWorkerProfile(8, 16, 24) },
     { ...base, targetWorkersByChapter: createWorkerProfile(12, 24, 40) },
     { ...base, targetWorkersByChapter: derivedProfile },
+  ];
+  return [
+    ...workerProfiles,
+    ...[10, 15, 20].map((bookPacksToBuy, index) => ({
+      ...base,
+      targetWorkersByChapter: { ...workerProfiles[index].targetWorkersByChapter },
+      bookPacksToBuy,
+      bookPurchaseTiming: 'village-early' as const,
+    })),
   ];
 };
 
@@ -160,9 +173,14 @@ const createNeighbors = (policy: OptimizedPolicy): OptimizedPolicy[] => {
       neighbors.push(next);
     }
   }
-  for (const packs of [0, 3, 5, 10]) {
+  for (const packs of [0, 3, 5, 10, 15, 20, 23, 25]) {
     neighbors.push({ ...clonePolicy(policy), bookPacksToBuy: packs });
   }
+  neighbors.push({
+    ...clonePolicy(policy),
+    bookPurchaseTiming:
+      policy.bookPurchaseTiming === 'workforce-target' ? 'village-early' : 'workforce-target',
+  });
   for (const roundTrips of [0, 4, 10, 20, 30]) {
     neighbors.push({ ...clonePolicy(policy), maxMarketRoundTripsPerDecision: roundTrips });
   }
@@ -197,7 +215,7 @@ export const optimizePolicyToFirstInvasion = (
     );
     const result = simulateToFirstInvasion({
       maxGameSeconds: 45 * 60,
-      maxExpeditionSeconds: 10 * 60,
+      maxExpeditionSeconds: 30 * 60,
       expeditionDecisionIntervalSeconds: 10,
       manualGatherActionsPerDecision: actionsPerDecision,
       maxInvestmentsPerDecision: actionsPerDecision,
@@ -206,6 +224,7 @@ export const optimizePolicyToFirstInvasion = (
       targetWorkersByChapter: policy.targetWorkersByChapter,
       targetBuildingLevelByChapter: policy.targetBuildingLevelByChapter,
       bookPacksToBuy: policy.bookPacksToBuy,
+      bookPurchaseTiming: policy.bookPurchaseTiming,
       completeContractsBeforeProjects: policy.completeContractsBeforeProjects,
       deliverWhileGrowing: policy.deliverWhileGrowing,
       productionPolicy: policy.productionPolicy,
@@ -217,6 +236,7 @@ export const optimizePolicyToFirstInvasion = (
   };
 
   let current = createSeedPolicies()
+    .slice(0, maxEvaluations)
     .map(evaluate)
     .sort((left, right) => left.score - right.score)[0];
 

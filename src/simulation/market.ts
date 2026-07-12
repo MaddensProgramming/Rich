@@ -29,6 +29,28 @@ export const getMarketPrices = (state: GameState) =>
 const getPressureDelta = (resourceId: ResourceId, quantity: number) =>
   (quantity / resourceById[resourceId].marketDepth) * MARKET_PRESSURE_IMPACT;
 
+// Trades execute against every marginal price crossed by the order, rather than
+// valuing the whole batch at its opening quote.  This is the integral of the
+// (clamped) linear pressure curve and is deliberately shared by manual and
+// automated trades.
+const getIntegratedPressure = (start: number, pressureDelta: number) => {
+  if (pressureDelta === 0) return start;
+  const end = clamp(start + pressureDelta, MARKET_PRESSURE_MIN, MARKET_PRESSURE_MAX);
+  const moved = end - start;
+  const flat = pressureDelta - moved;
+  return ((start + end) * 0.5 * moved + end * flat) / pressureDelta;
+};
+
+const getBuyCost = (state: GameState, resourceId: ResourceId, quantity: number) =>
+  quantity * resourceById[resourceId].basePrice * BUY_PRICE_MARKUP *
+  getIntegratedPressure(state.market[resourceId].pressure, getPressureDelta(resourceId, quantity));
+
+const getSellRevenue = (state: GameState, resourceId: ResourceId, quantity: number) => {
+  const delta = -getPressureDelta(resourceId, quantity) * getMarketSellImpactMultiplier(state, resourceId);
+  return quantity * resourceById[resourceId].basePrice *
+    getIntegratedPressure(state.market[resourceId].pressure, delta);
+};
+
 const normalizeThreshold = (
   value: number | null | undefined,
   fallback: number | null,
@@ -49,15 +71,20 @@ const normalizeThreshold = (
 
 const buyResourceInPlace = (state: GameState, resourceId: ResourceId, requestedQuantity: number) => {
   const quantity = Math.max(0, asFiniteNumber(requestedQuantity, 0));
-  const buyPrice = getBuyPrice(state, resourceId);
-  const affordableQuantity = buyPrice > 0 ? state.money / buyPrice : 0;
-  const actualQuantity = Math.min(quantity, affordableQuantity);
+  let low = 0;
+  let high = quantity;
+  for (let iteration = 0; iteration < 48; iteration += 1) {
+    const midpoint = (low + high) / 2;
+    if (getBuyCost(state, resourceId, midpoint) <= state.money) low = midpoint;
+    else high = midpoint;
+  }
+  const actualQuantity = low;
 
   if (actualQuantity <= 0) {
     return false;
   }
 
-  state.money = Math.max(0, state.money - actualQuantity * buyPrice);
+  state.money = Math.max(0, state.money - getBuyCost(state, resourceId, actualQuantity));
   state.resources[resourceId] += actualQuantity;
   state.market[resourceId].pressure = clamp(
     state.market[resourceId].pressure + getPressureDelta(resourceId, actualQuantity),
@@ -76,9 +103,8 @@ const sellResourceInPlace = (state: GameState, resourceId: ResourceId, requested
     return false;
   }
 
-  const sellPrice = getSellPrice(state, resourceId);
   state.resources[resourceId] = Math.max(0, state.resources[resourceId] - actualQuantity);
-  state.money += actualQuantity * sellPrice;
+  state.money += getSellRevenue(state, resourceId, actualQuantity);
   state.market[resourceId].pressure = clamp(
     state.market[resourceId].pressure -
       getPressureDelta(resourceId, actualQuantity) * getMarketSellImpactMultiplier(state, resourceId),

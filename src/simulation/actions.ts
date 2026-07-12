@@ -31,7 +31,8 @@ export const getWorkerHireCost = (state: GameState) => {
     (total, quantity) => total + quantity,
     0,
   );
-  return 95 + (state.workers.total + enlistedPopulation) * 30;
+  return (95 + (state.workers.total + enlistedPopulation) * 30) *
+    Math.max(0.5, 1 - state.legacy.perks.village_bonds * 0.05);
 };
 
 export const getHousingUpgradeCost = (state: GameState): ResourceMap => {
@@ -440,12 +441,12 @@ export const hireWorker = (state: GameState): GameState => {
   }
 
   const cost = getWorkerHireCost(state);
-  if (state.money + 1e-9 < cost) {
+  if (state.money + 1e-6 < cost) {
     return state;
   }
 
   const next = cloneGameState(state);
-  next.money -= cost;
+  next.money = Math.max(0, next.money - cost);
   next.workers.total += 1;
   return next;
 };

@@ -43,12 +43,16 @@ const experiencePerkIds: ExperiencePerkId[] = [
   'prepared_stores',
   'merchant_contacts',
   'battle_wisdom',
+  'book_of_wisdom',
+  'starting_capital',
+  'village_bonds',
 ];
 
 export const createDefaultExpeditionState = (): ExpeditionState => ({
   phase: 'exploring',
   barracksConstructed: false,
   troops: { militia: 0, archer: 0, guard: 0 },
+  trainingLevels: { militia: 0, archer: 0, guard: 0 },
   defeatedNodeIds: [],
   invasionSecondsRemaining: 0,
   evacuationPrepared: false,
@@ -66,6 +70,9 @@ export const createDefaultLegacyState = (): LegacyState => ({
     prepared_stores: 0,
     merchant_contacts: 0,
     battle_wisdom: 0,
+    book_of_wisdom: 0,
+    starting_capital: 0,
+    village_bonds: 0,
   },
 });
 
@@ -180,6 +187,7 @@ const createDefaultCampaignState = (): CampaignState => ({
   seenVictory: false,
   activeContractIds: [],
   completedContractIds: [],
+  lastContractCompletion: null,
 });
 
 const hasLegacyBuildingProgress = (rawBuildings: Record<string, unknown>) =>
@@ -290,6 +298,19 @@ const normalizeCampaignState = (
     completedContractIds: (Array.isArray(raw.completedContractIds) ? raw.completedContractIds : []).filter(
       (id): id is string => typeof id === 'string' && id in contractById,
     ),
+    lastContractCompletion:
+      isObject(raw.lastContractCompletion) &&
+      typeof raw.lastContractCompletion.contractId === 'string' &&
+      raw.lastContractCompletion.contractId in contractById
+        ? (() => {
+            const contract = contractById[raw.lastContractCompletion.contractId as keyof typeof contractById];
+            return {
+              contractId: contract.id,
+              rewardMoney: contract.rewardMoney,
+              rewardBooks: (contract.rewardBooks ?? []).map((reward) => ({ ...reward })),
+            };
+          })()
+        : null,
   };
 };
 
@@ -391,6 +412,7 @@ export const createInitialGameState = (
   state.resources.stone += legacy.perks.prepared_stores * 12;
   state.resources.food += legacy.perks.prepared_stores * 20;
   state.money += legacy.perks.merchant_contacts * 150;
+  state.money += [0, 200, 700, 2_000, 7_000, 20_000][legacy.perks.starting_capital] ?? 20_000;
   return state;
 };
 
@@ -427,6 +449,11 @@ const normalizeExpeditionState = (value: unknown): ExpeditionState => {
       militia: Math.max(0, Math.trunc(asFiniteNumber(rawTroops.militia, 0))),
       archer: Math.max(0, Math.trunc(asFiniteNumber(rawTroops.archer, 0))),
       guard: Math.max(0, Math.trunc(asFiniteNumber(rawTroops.guard, 0))),
+    },
+    trainingLevels: {
+      militia: clamp(Math.trunc(asFiniteNumber(isObject(raw.trainingLevels) ? raw.trainingLevels.militia : 0, 0)), 0, 10),
+      archer: clamp(Math.trunc(asFiniteNumber(isObject(raw.trainingLevels) ? raw.trainingLevels.archer : 0, 0)), 0, 10),
+      guard: clamp(Math.trunc(asFiniteNumber(isObject(raw.trainingLevels) ? raw.trainingLevels.guard : 0, 0)), 0, 10),
     },
     defeatedNodeIds: Array.from(
       new Set(

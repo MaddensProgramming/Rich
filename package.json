@@ -9,6 +9,7 @@
     "preview": "vite preview --host 127.0.0.1",
     "simulate:progression": "tsx scripts/simulateProgression.ts",
     "optimize:progression": "tsx scripts/optimizeProgression.ts",
+    "experiment:books": "tsx scripts/experimentBooks.ts",
     "test": "vitest run",
     "test:watch": "vitest"
   },

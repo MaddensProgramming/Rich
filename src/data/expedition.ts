@@ -1,4 +1,5 @@
 import type {
+  ContractRewardBook,
   ExperiencePerkId,
   ResourceMap,
   TroopId,
@@ -22,6 +23,7 @@ export interface ExpeditionNodeDefinition {
   prerequisiteIds: string[];
   reward: ResourceMap;
   rewardMoney: number;
+  rewardBooks?: ContractRewardBook[];
   x: number;
   y: number;
   isRaidTown?: boolean;
@@ -55,6 +57,7 @@ export const NORTHERN_HOST_POWER = 2_200;
 export const NORTHERN_HOST_REWARD_MONEY = 25_000;
 export const NORTHERN_HOST_REWARD_EXPERIENCE = 20;
 export const MAX_EXPERIENCE_PERK_LEVEL = 5;
+export const EXPEDITION_ENEMY_POWER_MULTIPLIER = 1.4;
 
 export const troops: TroopDefinition[] = [
   {
@@ -62,24 +65,24 @@ export const troops: TroopDefinition[] = [
     label: 'Militia',
     description: 'Cheap front-line troops who absorb the first casualties.',
     power: 10,
-    cost: { food: 30, tools: 6 },
-    moneyCost: 50,
+    cost: { food: 75, tools: 15 },
+    moneyCost: 125,
   },
   {
     id: 'archer',
     label: 'Archer',
     description: 'Strong ranged troops equipped with bows.',
     power: 14,
-    cost: { food: 40, bows: 4, tools: 2 },
-    moneyCost: 100,
+    cost: { food: 100, bows: 10, tools: 5 },
+    moneyCost: 250,
   },
   {
     id: 'guard',
     label: 'Guard',
     description: 'Powerful professionals protected by forged equipment.',
     power: 19,
-    cost: { food: 60, swords: 4, iron_bars: 8, tools: 2 },
-    moneyCost: 200,
+    cost: { food: 150, swords: 10, iron_bars: 20, tools: 5 },
+    moneyCost: 500,
   },
 ];
 
@@ -170,6 +173,7 @@ export const expeditionNodes: ExpeditionNodeDefinition[] = [
     prerequisiteIds: ['smugglers_track', 'abandoned_mine'],
     reward: { bows: 5, tools: 8 },
     rewardMoney: 450,
+    rewardBooks: [{ bookId: 'forest_paths', rarity: 'rare', count: 1 }],
     x: 56,
     y: 62,
     eventDialogue: {
@@ -210,6 +214,7 @@ export const expeditionNodes: ExpeditionNodeDefinition[] = [
     prerequisiteIds: ['frozen_bridge'],
     reward: { food: 100, tools: 12 },
     rewardMoney: 900,
+    rewardBooks: [{ bookId: 'hearty_recipes', rarity: 'rare', count: 1 }],
     x: 82,
     y: 25,
   },
@@ -222,6 +227,7 @@ export const expeditionNodes: ExpeditionNodeDefinition[] = [
     prerequisiteIds: ['frozen_bridge', 'mercenary_stockade'],
     reward: { stone_blocks: 35, swords: 8 },
     rewardMoney: 1_100,
+    rewardBooks: [{ bookId: 'weapon_contracts', rarity: 'rare', count: 1 }],
     x: 84,
     y: 54,
   },
@@ -284,7 +290,25 @@ export const experiencePerks: ExperiencePerkDefinition[] = [
     id: 'battle_wisdom',
     label: 'Battle Wisdom',
     description: 'Each defeat becomes doctrine for the next army.',
-    levelDescription: '+15% army power per level',
+    levelDescription: '+25% army power per level',
+  },
+  {
+    id: 'book_of_wisdom',
+    label: 'Book of Wisdom',
+    description: 'Hard-won knowledge improves every trade in the settlement.',
+    levelDescription: '+10% worker efficiency per level',
+  },
+  {
+    id: 'starting_capital',
+    label: 'Starting Capital',
+    description: 'A protected treasury bankrolls the next settlement.',
+    levelDescription: '$200 / $700 / $2,000 / $7,000 / $20,000 starting money',
+  },
+  {
+    id: 'village_bonds',
+    label: 'Village Bonds',
+    description: 'Families and guilds make recruitment less expensive.',
+    levelDescription: '-5% villager cost per level',
   },
 ];
 

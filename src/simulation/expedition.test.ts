@@ -66,17 +66,17 @@ describe('post-campaign expedition', () => {
     state.workers.total = 6;
     state.money = 1_000;
     state.resources.food = 1_000;
-    state.resources.bows = 10;
+    state.resources.bows = 20;
     state.buildings.mine.workers = 4;
     state.campaign.constructedBuildings.mine = true;
 
     state = trainTroops(state, 'archer', 2);
     expect(state.expedition.troops.archer).toBe(2);
     expect(state.workers.total).toBe(4);
-    expect(state.resources.food).toBe(920);
-    expect(state.resources.bows).toBe(2);
-    expect(state.resources.tools).toBe(976);
-    expect(state.money).toBe(800);
+    expect(state.resources.food).toBe(800);
+    expect(state.resources.bows).toBe(0);
+    expect(state.resources.tools).toBe(970);
+    expect(state.money).toBe(500);
     expect(trainTroops(state, 'archer', 1)).toBe(state);
   });
 
@@ -128,7 +128,7 @@ describe('post-campaign expedition', () => {
     expect(failedRaid.expedition.phase).toBe('exploring');
     expect(failedRaid.expedition.relicSecured).toBe(false);
 
-    state.expedition.troops = { militia: 0, archer: 0, guard: 10 };
+    state.expedition.troops = { militia: 0, archer: 0, guard: 13 };
     const moneyBefore = state.money;
 
     state = attackExpeditionNode(state, 'sonnenburg');

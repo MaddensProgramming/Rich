@@ -30,6 +30,23 @@ const renderRequirements = (game: GameStore, required: Partial<Record<ResourceId
       );
     });
 
+const renderBookRewards = (game: GameStore, rewards: NonNullable<ReturnType<typeof getAvailableContracts>[number]['rewardBooks']>) =>
+  rewards.map((reward) => {
+    const book = game.definitions.bookById[reward.bookId];
+    return (
+      <span className={`contract-book-reward rarity-${reward.rarity}`} key={`${reward.bookId}-${reward.rarity}`}>
+        {reward.count}× {game.definitions.rarityLabels[reward.rarity]} {book.label}
+      </span>
+    );
+  });
+
+const renderRewards = (game: GameStore, rewardMoney: number, rewardBooks = [] as NonNullable<ReturnType<typeof getAvailableContracts>[number]['rewardBooks']>) => (
+  <div className="contract-reward">
+    <span>${formatNumber(rewardMoney, 0)}</span>
+    {renderBookRewards(game, rewardBooks)}
+  </div>
+);
+
 export function ContractsPanel({ game }: ContractsPanelProps) {
   const active = getActiveContracts(game);
   const available = getAvailableContracts(game);
@@ -43,6 +60,14 @@ export function ContractsPanel({ game }: ContractsPanelProps) {
         </div>
       </div>
 
+      {game.campaign.lastContractCompletion ? (
+        <div className="contract-receipt" role="status">
+          <strong>Contract delivered</strong>
+          <span>Received ${formatNumber(game.campaign.lastContractCompletion.rewardMoney, 0)}</span>
+          {renderBookRewards(game, game.campaign.lastContractCompletion.rewardBooks)}
+        </div>
+      ) : null}
+
       {active.length > 0 ? (
         <div className="contract-list">
           <h3>Active</h3>
@@ -53,7 +78,7 @@ export function ContractsPanel({ game }: ContractsPanelProps) {
                 <strong>{contract.label}</strong>
                 <p>{contract.description}</p>
                 <div className="contract-reqs">{renderRequirements(game, contract.requiredResources)}</div>
-                <div className="contract-reward">Reward: ${formatNumber(contract.rewardMoney, 0)}</div>
+                {renderRewards(game, contract.rewardMoney, contract.rewardBooks)}
                 <div className="contract-actions">
                   <button type="button" disabled={!ready} onClick={() => game.completeContract(contract.id)}>
                     Deliver
@@ -78,7 +103,7 @@ export function ContractsPanel({ game }: ContractsPanelProps) {
               <strong>{contract.label}</strong>
               <p>{contract.description}</p>
               <div className="contract-reqs">{renderRequirements(game, contract.requiredResources)}</div>
-              <div className="contract-reward">Reward: ${formatNumber(contract.rewardMoney, 0)}</div>
+              {renderRewards(game, contract.rewardMoney, contract.rewardBooks)}
               <button type="button" onClick={() => game.acceptContract(contract.id)}>
                 Accept
               </button>

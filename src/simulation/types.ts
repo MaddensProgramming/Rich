@@ -191,6 +191,11 @@ export interface CampaignState {
   seenVictory: boolean;
   activeContractIds: string[];
   completedContractIds: string[];
+  lastContractCompletion: {
+    contractId: string;
+    rewardMoney: number;
+    rewardBooks: ContractRewardBook[];
+  } | null;
 }
 
 export interface MarketResourceState {
@@ -215,7 +220,10 @@ export type ExperiencePerkId =
   | 'pioneering_spirit'
   | 'prepared_stores'
   | 'merchant_contacts'
-  | 'battle_wisdom';
+  | 'battle_wisdom'
+  | 'book_of_wisdom'
+  | 'starting_capital'
+  | 'village_bonds';
 
 export type ExpeditionPhase = 'exploring' | 'invasion' | 'defeated' | 'victorious';
 
@@ -231,6 +239,7 @@ export interface ExpeditionState {
   phase: ExpeditionPhase;
   barracksConstructed: boolean;
   troops: Record<TroopId, number>;
+  trainingLevels: Record<TroopId, number>;
   defeatedNodeIds: string[];
   invasionSecondsRemaining: number;
   evacuationPrepared: boolean;

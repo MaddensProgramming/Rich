@@ -14,8 +14,10 @@ import {
   constructBarracks,
   getArmyPower,
   getBattlePreview,
+  getTroopTrainingCost,
   isExpeditionNodeAccessible,
   trainTroops,
+  trainTroopFormation,
 } from './expedition';
 import { applyProductionPlan, createProductionPlan } from './productionPlanner';
 import {
@@ -68,10 +70,27 @@ const getNextAccessibleNode = (state: GameState) =>
 const getTrainingDemand = (state: GameState): { troopId: TroopId; quantity: number } | null => {
   const node = getNextAccessibleNode(state);
   if (!node) return null;
-  const missingPower = Math.max(0, node.enemyPower - getArmyPower(state));
+  const missingPower = Math.max(0, (getBattlePreview(state, node.id)?.enemyPower ?? node.enemyPower) - getArmyPower(state));
   if (missingPower <= 0) return null;
   const troopId = preferredTroopIds[0];
   return { troopId, quantity: Math.ceil(missingPower / troopById[troopId].power) };
+};
+
+const getBestFormationTraining = (state: GameState) => {
+  const before = getArmyPower(state);
+  return preferredTroopIds
+    .filter((troopId) => state.expedition.troops[troopId] > 0 && state.expedition.trainingLevels[troopId] < 10)
+    .map((troopId) => {
+      const cost = getTroopTrainingCost(state, troopId);
+      const trained = trainTroopFormation({
+        ...state,
+        money: Math.max(state.money, cost.money),
+        resources: { ...state.resources, food: Math.max(state.resources.food, cost.food) },
+      }, troopId);
+      const powerGain = Math.max(1, getArmyPower(trained) - before);
+      return { troopId, cost, effortPerPower: (cost.money * getMoneyUnitCost() + cost.food * getResourceUnitCost('food')) / powerGain };
+    })
+    .sort((left, right) => left.effortPerPower - right.effortPerPower)[0] ?? null;
 };
 
 const addScaledCost = (target: ResourceMap, cost: ResourceMap, quantity = 1) => {
@@ -126,6 +145,13 @@ const runExpeditionActions = (
 
     const training = getTrainingDemand(state);
     if (!training) break;
+    const formation = getBestFormationTraining(state);
+    if (formation && formation.effortPerPower < getTroopEffortPerPower(training.troopId) &&
+        state.money >= formation.cost.money && state.resources.food >= formation.cost.food) {
+      state = trainTroopFormation(state, formation.troopId);
+      actions.push(`trained ${troopById[formation.troopId].label} formation`);
+      continue;
+    }
     const trainingMoney = troopById[training.troopId].moneyCost * training.quantity;
     if (state.money + 1e-6 < trainingMoney) {
       const trade = sellForMoney(state, trainingMoney);
@@ -162,8 +188,14 @@ const configureExpeditionProduction = (
   } else {
     const training = getTrainingDemand(state);
     if (training) {
-      addScaledCost(additionalDemand, troopById[training.troopId].cost, training.quantity);
-      moneyTarget += troopById[training.troopId].moneyCost * training.quantity;
+      const formation = getBestFormationTraining(state);
+      if (formation && formation.effortPerPower < getTroopEffortPerPower(training.troopId)) {
+        additionalDemand.food = (additionalDemand.food ?? 0) + formation.cost.food;
+        moneyTarget += formation.cost.money;
+      } else {
+        addScaledCost(additionalDemand, troopById[training.troopId].cost, training.quantity);
+        moneyTarget += troopById[training.troopId].moneyCost * training.quantity;
+      }
     }
   }
   return applyProductionPlan(

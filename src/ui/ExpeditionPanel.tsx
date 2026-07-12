@@ -18,6 +18,7 @@ import {
   getBattlePreview,
   getExperiencePerkUpgradeCost,
   getInvasionBattlePreview,
+  getTroopTrainingCost,
   getUnassignedWorkerCount,
 } from '../simulation';
 import type { ResourceMap, TroopId } from '../simulation';
@@ -213,6 +214,29 @@ export function ExpeditionPanel({ game }: ExpeditionPanelProps) {
                       </div>
                     </div>
                   ))}
+                </div>
+                <div className="formation-training">
+                  <div>
+                    <strong>Formation training</strong>
+                    <small>Improve one troop type by 10% power per level (maximum level 10).</small>
+                  </div>
+                  {troops.map((troop) => {
+                    const level = game.expedition.trainingLevels[troop.id];
+                    const cost = getTroopTrainingCost(game, troop.id);
+                    const canTrain = level < 10 && game.expedition.troops[troop.id] > 0 &&
+                      game.money >= cost.money && game.resources.food >= cost.food;
+                    return (
+                      <div className="formation-training-row" key={troop.id}>
+                        <div>
+                          <strong>{troop.label} · Level {level}/10</strong>
+                          <small>+{level * 10}% power · Next: {cost.food} food · ${formatNumber(cost.money, 0)}</small>
+                        </div>
+                        <button type="button" disabled={!canTrain} onClick={() => game.trainTroopFormation(troop.id)}>
+                          Train formation
+                        </button>
+                      </div>
+                    );
+                  })}
                 </div>
               </>
             )}

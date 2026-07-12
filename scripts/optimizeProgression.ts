@@ -15,6 +15,7 @@ const printResult = (label: string, result: PolicyOptimizationResult) => {
       interval: `${evaluation.policy.decisionIntervalSeconds}s`,
       workers: `${evaluation.policy.targetWorkersByChapter.hamlet}/${evaluation.policy.targetWorkersByChapter.village}/${evaluation.policy.targetWorkersByChapter.mountain_town}`,
       books: evaluation.policy.bookPacksToBuy,
+      bookTiming: evaluation.policy.bookPurchaseTiming,
       contractsFirst: evaluation.policy.completeContractsBeforeProjects,
       roundTrips: evaluation.policy.maxMarketRoundTripsPerDecision,
       production: evaluation.policy.productionPolicy,

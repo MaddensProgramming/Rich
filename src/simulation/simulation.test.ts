@@ -343,6 +343,17 @@ describe('simulation campaign cut', () => {
     expect(done.resources.stone).toBe(110);
     expect(done.campaign.completedContractIds).toContain('mountain_road');
     expect(getAvailableContracts(done).some((c) => c.id === 'mountain_road')).toBe(false);
+
+    const rewarded = completeContract({
+      ...done,
+      resources: { ...done.resources, swords: 12, bows: 16 },
+      campaign: { ...done.campaign, activeContractIds: ['garrison_order'] },
+    }, 'garrison_order');
+    expect(rewarded.books.owned['weapon_contracts:uncommon']).toBe(1);
+    expect(rewarded.campaign.lastContractCompletion).toEqual({
+      contractId: 'garrison_order', rewardMoney: 760,
+      rewardBooks: [{ bookId: 'weapon_contracts', rarity: 'uncommon', count: 1 }],
+    });
   });
 
   it('shows two contract offers at a time from the finite queue', () => {

@@ -45,6 +45,7 @@ import {
   prepareEvacuation as prepareEvacuationInState,
   startNextRun as startNextRunInState,
   trainTroops as trainTroopsInState,
+  trainTroopFormation as trainTroopFormationInState,
 } from '../simulation';
 import type {
   BookId,
@@ -165,6 +166,7 @@ export interface GameStore extends GameState {
   upgradeHousing: () => void;
   constructBarracks: () => void;
   trainTroops: (troopId: TroopId, quantity?: number) => void;
+  trainTroopFormation: (troopId: TroopId) => void;
   attackExpeditionNode: (nodeId: string) => void;
   prepareEvacuation: () => void;
   evacuateTown: () => void;
@@ -315,6 +317,10 @@ export const useGameStore = create<GameStore>((set, get) => {
 
     trainTroops: (troopId, quantity = 1) => {
       set((state) => withDerivedState(trainTroopsInState(state, troopId, quantity)));
+    },
+
+    trainTroopFormation: (troopId) => {
+      set((state) => withDerivedState(trainTroopFormationInState(state, troopId)));
     },
 
     attackExpeditionNode: (nodeId) => {
