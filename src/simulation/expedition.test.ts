@@ -118,6 +118,27 @@ describe('post-campaign expedition', () => {
     expect(attackExpeditionNode(state, 'foothill_road')).toBe(state);
   });
 
+  it('assigns a new persisted event id to identical repeated battle attempts', () => {
+    const state = buildBarracks();
+    const first = attackExpeditionNode(state, 'foothill_road');
+    const second = attackExpeditionNode(first, 'foothill_road');
+
+    expect(first.expedition.lastBattle).toMatchObject({ victory: false, eventId: 1 });
+    expect(second.expedition.lastBattle).toMatchObject({ victory: false, eventId: 2 });
+    expect(second.expedition.lastBattle?.casualties).toEqual(first.expedition.lastBattle?.casualties);
+
+    const reloaded = hydrateGameState(second, 1_000);
+    expect(reloaded.expedition.battleEventSequence).toBe(2);
+    expect(reloaded.expedition.lastBattle?.eventId).toBe(2);
+
+    const legacySave = JSON.parse(JSON.stringify(first)) as Record<string, any>;
+    delete legacySave.expedition.battleEventSequence;
+    delete legacySave.expedition.lastBattle.eventId;
+    const migrated = hydrateGameState(legacySave, 1_000);
+    expect(migrated.expedition.battleEventSequence).toBe(1);
+    expect(migrated.expedition.lastBattle?.eventId).toBe(1);
+  });
+
   it('starts the invasion only after winning the Sonnenburg raid and grants its unique treasure', () => {
     let state = buildBarracks();
     state.expedition.defeatedNodeIds = expeditionNodes
@@ -250,11 +271,11 @@ describe('post-campaign expedition', () => {
     expect(earned).toBeGreaterThan(0);
     expect(evacuateTown(state)).toBe(state);
 
-    state = buyExperiencePerk(state, 'pioneering_spirit');
-    expect(state.legacy.perks.pioneering_spirit).toBe(1);
+    state = buyExperiencePerk(state, 'battle_wisdom');
+    expect(state.legacy.perks.battle_wisdom).toBe(1);
     const nextRun = startNextRun(state, 10_000);
     expect(nextRun.legacy.runNumber).toBe(2);
-    expect(nextRun.workers.total).toBe(2);
+    expect(nextRun.workers.total).toBe(1);
     expect(nextRun.campaign.chapterId).toBe('arrival');
     expect(nextRun.expedition.barracksConstructed).toBe(false);
   });
@@ -270,6 +291,26 @@ describe('post-campaign expedition', () => {
     expect(reloaded.expedition.troops.guard).toBe(3);
     expect(reloaded.legacy.experiencePoints).toBe(7);
     expect(reloaded.legacy.perks.battle_wisdom).toBe(2);
+
+    const withRemovedPerks = hydrateGameState({
+      ...state,
+      legacy: {
+        ...state.legacy,
+        perks: {
+          ...state.legacy.perks,
+          pioneering_spirit: 5,
+          prepared_stores: 5,
+          merchant_contacts: 5,
+        },
+      },
+    }, 0);
+    expect(withRemovedPerks.legacy.perks).toEqual({
+      battle_wisdom: 2,
+      book_of_wisdom: 0,
+      starting_capital: 0,
+      village_bonds: 0,
+    });
+    expect(withRemovedPerks.workers.total).toBe(state.workers.total);
 
     const migratedV2 = hydrateGameState({ ...state, expedition: undefined, legacy: undefined }, 0);
     expect(migratedV2.campaign.campaignComplete).toBe(true);

@@ -236,6 +236,10 @@ export const cloneGameState = (state: GameState): GameState => ({
       0,
       Math.trunc(asFiniteNumber(state.expedition.experienceEarnedThisRun, 0)),
     ),
+    battleEventSequence: Math.max(
+      0,
+      Math.trunc(asFiniteNumber(state.expedition.battleEventSequence, 0)),
+    ),
     lastBattle: state.expedition.lastBattle
       ? {
           ...state.expedition.lastBattle,
@@ -250,7 +254,12 @@ export const cloneGameState = (state: GameState): GameState => ({
       0,
       Math.trunc(asFiniteNumber(state.legacy.totalExperienceEarned, 0)),
     ),
-    perks: { ...state.legacy.perks },
+    perks: {
+      battle_wisdom: state.legacy.perks.battle_wisdom,
+      book_of_wisdom: state.legacy.perks.book_of_wisdom,
+      starting_capital: state.legacy.perks.starting_capital,
+      village_bonds: state.legacy.perks.village_bonds,
+    },
   },
   offline: {
     chargeSeconds: Math.max(0, asFiniteNumber(state.offline.chargeSeconds, 0)),

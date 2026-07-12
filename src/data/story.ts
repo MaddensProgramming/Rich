@@ -1,6 +1,6 @@
 import type { ChapterId } from '../simulation/types';
 
-export type StorySegmentId = ChapterId | 'victory';
+export type StorySegmentId = ChapterId | 'victory' | `battle-${string}`;
 
 export interface StorySegment {
   id: StorySegmentId;

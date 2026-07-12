@@ -269,24 +269,6 @@ export const expeditionNodeById = Object.fromEntries(
 
 export const experiencePerks: ExperiencePerkDefinition[] = [
   {
-    id: 'pioneering_spirit',
-    label: 'Pioneering Spirit',
-    description: 'Experienced settlers rally to your next foundation.',
-    levelDescription: '+1 starting worker per level',
-  },
-  {
-    id: 'prepared_stores',
-    label: 'Prepared Stores',
-    description: 'Escape plans place supplies where the next settlement can recover them.',
-    levelDescription: '+15 wood, +12 stone, and +20 food per level',
-  },
-  {
-    id: 'merchant_contacts',
-    label: 'Merchant Contacts',
-    description: 'Surviving traders extend credit to every new St. Moritz.',
-    levelDescription: '+$150 starting money per level',
-  },
-  {
     id: 'battle_wisdom',
     label: 'Battle Wisdom',
     description: 'Each defeat becomes doctrine for the next army.',

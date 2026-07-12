@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   BARRACKS_CONSTRUCTION_COST,
   EVACUATION_COST,
@@ -24,6 +24,8 @@ import {
 import type { ResourceMap, TroopId } from '../simulation';
 import type { GameStore } from '../store/gameStore';
 import { formatNumber } from './format';
+import { Storyteller } from './Storyteller';
+import { storyteller, type StorySegment } from '../data/story';
 
 interface ExpeditionPanelProps {
   game: GameStore;
@@ -57,6 +59,9 @@ export function ExpeditionPanel({ game }: ExpeditionPanelProps) {
   const [selectedNodeId, setSelectedNodeId] = useState(firstUncleared?.id ?? expeditionNodes[0].id);
   const [raidConfirmationOpen, setRaidConfirmationOpen] = useState(false);
   const [finalStandConfirmationOpen, setFinalStandConfirmationOpen] = useState(false);
+  const [battleStory, setBattleStory] = useState<StorySegment | null>(null);
+  const battleEventId = game.expedition.lastBattle?.eventId ?? null;
+  const observedBattleEventId = useRef(battleEventId);
   const selectedNode = expeditionNodeById[selectedNodeId] ?? expeditionNodes[0];
   const preview = useMemo(
     () => getBattlePreview(game, selectedNode.id),
@@ -69,6 +74,28 @@ export function ExpeditionPanel({ game }: ExpeditionPanelProps) {
     game.expedition.phase === 'invasion'
       ? game.expedition.invasionSecondsRemaining / INVASION_DURATION_SECONDS
       : 0;
+
+  useEffect(() => {
+    if (!battleEventId) {
+      observedBattleEventId.current = null;
+      return;
+    }
+    if (observedBattleEventId.current === battleEventId) return;
+    observedBattleEventId.current = battleEventId;
+    const report = game.expedition.lastBattle;
+    if (!report || report.nodeId === 'northern_host') return;
+    const node = expeditionNodeById[report.nodeId];
+    const dialogue = node?.eventDialogue;
+    if (!node || !dialogue) return;
+    const line = report.victory ? dialogue.victory : dialogue.defeat;
+    setBattleStory({
+      id: `battle-${battleEventId}`,
+      speaker: storyteller.name,
+      title: `${report.victory ? 'Victory' : 'Defeat'} at ${node.label}`,
+      lines: [line.replace(/^[^:]+:\s*/, '')],
+      goal: report.victory ? 'Choose the next route through the pass.' : 'Rebuild the army before another attempt.',
+    });
+  }, [battleEventId, game.expedition.lastBattle]);
 
   const attackSelected = () => {
     game.attackExpeditionNode(selectedNode.id);
@@ -147,7 +174,7 @@ export function ExpeditionPanel({ game }: ExpeditionPanelProps) {
                 >
                   <span>{cleared ? '✓' : node.isRaidTown ? '♜' : '◆'}</span>
                   <strong>{node.label}</strong>
-                  <small>{node.enemyPower}</small>
+                  <small>{nodePreview?.enemyPower ?? node.enemyPower} power</small>
                 </button>
               );
             })}
@@ -248,7 +275,7 @@ export function ExpeditionPanel({ game }: ExpeditionPanelProps) {
                 <span>{selectedNode.isRaidTown ? 'Prosperous town' : selectedNode.enemyLabel}</span>
                 <h3>{selectedNode.label}</h3>
               </div>
-              <strong>{selectedNode.enemyPower} power</strong>
+              <strong>{preview?.enemyPower ?? selectedNode.enemyPower} power</strong>
             </div>
             <p>{selectedNode.description}</p>
             <div className="battle-reward">
@@ -288,20 +315,6 @@ export function ExpeditionPanel({ game }: ExpeditionPanelProps) {
                   : expeditionNodeById[game.expedition.lastBattle.nodeId]?.label}
               </strong>
               <p>Casualties: {casualtyText(game.expedition.lastBattle.casualties)}.</p>
-              {game.expedition.lastBattle.nodeId !== 'northern_host'
-                ? (() => {
-                    const dialogue = expeditionNodeById[game.expedition.lastBattle.nodeId]?.eventDialogue;
-                    if (!dialogue) {
-                      return null;
-                    }
-
-                    return (
-                      <blockquote className="event-dialogue">
-                        {game.expedition.lastBattle.victory ? dialogue.victory : dialogue.defeat}
-                      </blockquote>
-                    );
-                  })()
-                : null}
             </section>
           ) : null}
 
@@ -427,6 +440,8 @@ export function ExpeditionPanel({ game }: ExpeditionPanelProps) {
           </div>
         </div>
       ) : null}
+
+      {battleStory ? <Storyteller segment={battleStory} onDismiss={() => setBattleStory(null)} /> : null}
 
       {game.expedition.phase === 'defeated' ? (
         <div className="blocking-dialog-shell defeat-shell" role="dialog" aria-modal="true" aria-labelledby="defeat-title">

@@ -39,9 +39,6 @@ export const SECOND_RECIPE_SLOT_LEVEL = 3;
 export const DEFAULT_WORKER_SHARE = 0.5;
 
 const experiencePerkIds: ExperiencePerkId[] = [
-  'pioneering_spirit',
-  'prepared_stores',
-  'merchant_contacts',
   'battle_wisdom',
   'book_of_wisdom',
   'starting_capital',
@@ -58,6 +55,7 @@ export const createDefaultExpeditionState = (): ExpeditionState => ({
   evacuationPrepared: false,
   relicSecured: false,
   experienceEarnedThisRun: 0,
+  battleEventSequence: 0,
   lastBattle: null,
 });
 
@@ -66,9 +64,6 @@ export const createDefaultLegacyState = (): LegacyState => ({
   experiencePoints: 0,
   totalExperienceEarned: 0,
   perks: {
-    pioneering_spirit: 0,
-    prepared_stores: 0,
-    merchant_contacts: 0,
     battle_wisdom: 0,
     book_of_wisdom: 0,
     starting_capital: 0,
@@ -407,11 +402,6 @@ export const createInitialGameState = (
   recentBookPack: [],
   };
 
-  state.workers.total += legacy.perks.pioneering_spirit;
-  state.resources.wood += legacy.perks.prepared_stores * 15;
-  state.resources.stone += legacy.perks.prepared_stores * 12;
-  state.resources.food += legacy.perks.prepared_stores * 20;
-  state.money += legacy.perks.merchant_contacts * 150;
   state.money += [0, 200, 700, 2_000, 7_000, 20_000][legacy.perks.starting_capital] ?? 20_000;
   return state;
 };
@@ -439,6 +429,13 @@ const normalizeExpeditionState = (value: unknown): ExpeditionState => {
       ? raw.phase
       : 'exploring';
   const rawBattle = isObject(raw.lastBattle) ? raw.lastBattle : null;
+  const rawBattleEventId = rawBattle
+    ? Math.max(1, Math.trunc(asFiniteNumber(rawBattle.eventId, 1)))
+    : 0;
+  const battleEventSequence = Math.max(
+    rawBattleEventId,
+    Math.trunc(asFiniteNumber(raw.battleEventSequence, rawBattleEventId)),
+  );
   const battleNodeId = rawBattle && typeof rawBattle.nodeId === 'string' ? rawBattle.nodeId : '';
   const rawCasualties = rawBattle && isObject(rawBattle.casualties) ? rawBattle.casualties : {};
 
@@ -469,9 +466,11 @@ const normalizeExpeditionState = (value: unknown): ExpeditionState => {
     evacuationPrepared: Boolean(raw.evacuationPrepared),
     relicSecured: Boolean(raw.relicSecured),
     experienceEarnedThisRun: Math.max(0, Math.trunc(asFiniteNumber(raw.experienceEarnedThisRun, 0))),
+    battleEventSequence,
     lastBattle:
       rawBattle && (battleNodeId in expeditionNodeById || battleNodeId === 'northern_host')
         ? {
+            eventId: rawBattleEventId,
             nodeId: battleNodeId,
             victory: Boolean(rawBattle.victory),
             armyPower: Math.max(0, asFiniteNumber(rawBattle.armyPower, 0)),

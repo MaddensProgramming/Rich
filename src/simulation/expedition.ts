@@ -27,13 +27,13 @@ import {
 import { createInitialGameState } from './gameState';
 import { autoEquipBestBooks } from './books';
 
-export interface BattlePreview extends BattleReport {
+export interface BattlePreview extends Omit<BattleReport, 'eventId'> {
   accessible: boolean;
   alreadyDefeated: boolean;
   reason: string | null;
 }
 
-export type InvasionBattlePreview = BattleReport;
+export type InvasionBattlePreview = Omit<BattleReport, 'eventId'>;
 
 const troopIds: TroopId[] = ['militia', 'archer', 'guard'];
 
@@ -215,7 +215,9 @@ export const attackExpeditionNode = (state: GameState, nodeId: string): GameStat
       next.expedition.troops[troopId] - preview.casualties[troopId],
     );
   }
+  next.expedition.battleEventSequence += 1;
   next.expedition.lastBattle = {
+    eventId: next.expedition.battleEventSequence,
     nodeId,
     victory: preview.victory,
     armyPower: preview.armyPower,
@@ -309,7 +311,9 @@ export const defendTown = (state: GameState): GameState => {
       next.expedition.troops[troopId] - preview.casualties[troopId],
     );
   }
+  next.expedition.battleEventSequence += 1;
   next.expedition.lastBattle = {
+    eventId: next.expedition.battleEventSequence,
     ...preview,
     casualties: { ...preview.casualties },
   };

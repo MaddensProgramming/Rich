@@ -217,9 +217,6 @@ export interface OfflineState {
 export type TroopId = 'militia' | 'archer' | 'guard';
 
 export type ExperiencePerkId =
-  | 'pioneering_spirit'
-  | 'prepared_stores'
-  | 'merchant_contacts'
   | 'battle_wisdom'
   | 'book_of_wisdom'
   | 'starting_capital'
@@ -228,6 +225,7 @@ export type ExperiencePerkId =
 export type ExpeditionPhase = 'exploring' | 'invasion' | 'defeated' | 'victorious';
 
 export interface BattleReport {
+  eventId: number;
   nodeId: string;
   victory: boolean;
   armyPower: number;
@@ -245,6 +243,7 @@ export interface ExpeditionState {
   evacuationPrepared: boolean;
   relicSecured: boolean;
   experienceEarnedThisRun: number;
+  battleEventSequence: number;
   lastBattle: BattleReport | null;
 }
 
